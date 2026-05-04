@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 
+	"fmm/internal/domain"
+	"fmm/internal/geo"
 	"fmm/internal/i18n"
 	"fmm/internal/parser"
 	"fmm/internal/sysinfo"
@@ -36,35 +38,56 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				pterm.Warning.Println("--update-cache implies --apply. Cache will not update.")
 			}
 
-			// VALIDAÇÃO DA FASE 2:
-			pterm.Info.Println("Detectando ambiente do sistema...")
-
+			// --- Setup e Parsing ---
 			codename, err := sysinfo.GetCodename()
 			if err != nil {
 				pterm.Error.Printf("Falha ao detectar OS release: %v\n", err)
 				os.Exit(1)
 			}
-			pterm.Success.Printf("Codename Mint: %s\n", codename)
 
 			config, err := parser.LoadConfig(codename)
 			if err != nil {
 				pterm.Error.Printf("Falha ao carregar mintsources.conf: %v\n", err)
 				os.Exit(1)
 			}
-			pterm.Success.Printf("Codename Base: %s\n", config.BaseCodename)
 
-			// Usando caminhos vindos do arquivo de conf:
 			mintMirrors, baseMirrors, err := parser.LoadMirrors(config.MirrorsPath, config.BaseMirrorsPath)
 			if err != nil {
 				pterm.Error.Printf("Falha ao carregar arquivos de mirrors: %v\n", err)
 				os.Exit(1)
 			}
-			pterm.Success.Printf("Mirrors carregados: %d Mint | %d Base\n", len(mintMirrors), len(baseMirrors))
 
-			if len(mintMirrors) > 0 && len(baseMirrors) > 0 {
-				fmt.Printf(" \n -> Exemplo Mint: %+v\n", mintMirrors[0])
-				fmt.Printf(" -> Exemplo Base: %+v\n\n", baseMirrors[0])
+			// --- Lógica Geográfica ---
+			localCountry := geo.DetectLocalCountry()
+
+			// Determina o filtro de países:
+			// Se o user não passou --countries nem --mirrors, rodamos APENAS no país local e globais ("WD")
+			targetCountries := runCountries
+			if len(runCountries) == 0 && len(runMirrors) == 0 {
+				targetCountries = []string{localCountry, "WD"}
 			}
+
+			pterm.Info.Printf("Iniciando testes de mirrors.\nPaís local detectado: %s\n", localCountry)
+
+			// --- Aplicação dos Filtros ---
+			filteredMint := domain.FilterMirrors(mintMirrors, targetCountries, runMirrors, runLimit)
+			filteredBase := domain.FilterMirrors(baseMirrors, targetCountries, runMirrors, runLimit)
+
+			pterm.Success.Printf("Filtro Aplicado: Testaremos %d Mint | %d Base\n", len(filteredMint), len(filteredBase))
+
+			if len(filteredMint) == 0 && len(filteredBase) == 0 {
+				pterm.Warning.Println("Nenhum mirror selecionado para teste. Verifique suas flags ou o país local detectado.")
+				os.Exit(0)
+			}
+
+			// Impressão visual temporária para validação
+			if len(filteredMint) > 0 {
+				fmt.Printf(" [Mint Alvo 1]: %s (%s)\n", filteredMint[0].URL, filteredMint[0].Country)
+			}
+			if len(filteredBase) > 0 {
+				fmt.Printf(" [Base Alvo 1]: %s (%s)\n", filteredBase[0].URL, filteredBase[0].Country)
+			}
+
 		},
 	}
 
