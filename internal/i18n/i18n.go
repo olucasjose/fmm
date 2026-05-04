@@ -30,6 +30,9 @@ var dictionary = map[Language]map[string]string{
 		"flag_errs":    "Show exact reasons for mirror failures",
 		"flag_quiet":   "Run silently",
 		"interrupted":  "Process interrupted by user. Cleaning up...",
+		"unreachable":  "Unreachable",
+		"obsolete":     "Obsolete/Stale",
+		"testing":      "Testing",
 	},
 	PT: {
 		"root_desc":    "Fastest Mint Mirror - Teste e aplique mirrors do Linux Mint.",
@@ -45,6 +48,9 @@ var dictionary = map[Language]map[string]string{
 		"flag_errs":    "Mostra motivos exatos de erros em mirrors",
 		"flag_quiet":   "Roda os testes de forma silenciosa",
 		"interrupted":  "Processo interrompido pelo usuário. Limpando dados seguros...",
+		"unreachable":  "Inacessível",
+		"obsolete":     "Desatualizado",
+		"testing":      "Testando",
 	},
 	ES: {
 		"root_desc":    "Fastest Mint Mirror - Pruebe y aplique mirrors de Linux Mint.",
@@ -60,6 +66,9 @@ var dictionary = map[Language]map[string]string{
 		"flag_errs":    "Muestra motivos exactos de fallas en mirrors",
 		"flag_quiet":   "Ejecuta silenciosamente",
 		"interrupted":  "Proceso interrumpido por el usuario. Limpiando...",
+		"unreachable":  "Inaccesible",
+		"obsolete":     "Obsoleto",
+		"testing":      "Probando",
 	},
 }
 
