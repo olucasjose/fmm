@@ -11,6 +11,7 @@ import (
 	"fmm/internal/i18n"
 	"fmm/internal/parser"
 	"fmm/internal/sysinfo"
+	"fmm/internal/system"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
@@ -148,9 +149,49 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				pterm.Error.Println("Nenhum mirror Base válido encontrado.")
 			}
 
-			// A FASE 5 ENTRARÁ AQUI SE A FLAG --APPLY FOR VERDADEIRA
+			// Determina qual URL usar (se não testou ou não achou melhor, mantém o default do .conf)
+			finalMintURL := config.MintDefault
+			if bestMint != nil {
+				finalMintURL = bestMint.Mirror.URL
+			}
+
+			finalBaseURL := config.BaseDefault
+			if bestBase != nil {
+				finalBaseURL = bestBase.Mirror.URL
+			}
+
 			if runApply {
-				pterm.Warning.Println("Apply ignorado na Fase 4. Entrará na Fase 5.")
+				if bestMint == nil && bestBase == nil {
+					pterm.Warning.Println("Nenhum mirror testado teve sucesso. O sources.list será mantido intacto para sua segurança.")
+					os.Exit(1)
+				}
+
+				pterm.DefaultSection.Println("Aplicando Alterações")
+
+				// Precisa de root para modificar /etc/apt/
+				if os.Geteuid() != 0 {
+					pterm.Error.Println("Aplicação de mirrors requer privilégios de administrador. Execute fmm com 'sudo'.")
+					os.Exit(1)
+				}
+
+				err := system.ApplyMirrors(ctx, config, finalMintURL, finalBaseURL)
+				if err != nil {
+					pterm.Error.Printf("Falha ao modificar o sistema: %v\n", err)
+					os.Exit(1)
+				}
+
+				pterm.Success.Println("Mirrors aplicados com sucesso! Backup salvo em .bak")
+
+				if runUpdateCache {
+					pterm.Info.Println("Atualizando cache do APT...")
+					if err := system.UpdateCache(ctx); err != nil {
+						pterm.Error.Printf("O apt-get update falhou: %v\n", err)
+					} else {
+						pterm.Success.Println("Cache atualizado com sucesso.")
+					}
+				} else {
+					pterm.Warning.Println("Lembre-se de rodar 'sudo apt-get update' para atualizar o cache.")
+				}
 			}
 
 		},
