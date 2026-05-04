@@ -2,10 +2,14 @@ package cli
 
 import (
 	"context"
+	"fmt"
+	"os"
 
+	"fmm/internal/i18n"
+	"fmm/internal/parser"
+	"fmm/internal/sysinfo"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"fmm/internal/i18n"
 )
 
 var (
@@ -27,14 +31,40 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 			if runQuiet {
 				pterm.DisableOutput()
 			}
-			
-			// Validação simples
+
 			if runUpdateCache && !runApply {
 				pterm.Warning.Println("--update-cache implies --apply. Cache will not update.")
 			}
 
-			// Lógica da fase 4 entrará aqui respeitando ctx.Done()
-			pterm.Info.Println("Run command initialized. Logic pending Phase 2/3/4.")
+			// VALIDAÇÃO DA FASE 2:
+			pterm.Info.Println("Detectando ambiente do sistema...")
+
+			codename, err := sysinfo.GetCodename()
+			if err != nil {
+				pterm.Error.Printf("Falha ao detectar OS release: %v\n", err)
+				os.Exit(1)
+			}
+			pterm.Success.Printf("Codename Mint: %s\n", codename)
+
+			config, err := parser.LoadConfig(codename)
+			if err != nil {
+				pterm.Error.Printf("Falha ao carregar mintsources.conf: %v\n", err)
+				os.Exit(1)
+			}
+			pterm.Success.Printf("Codename Base: %s\n", config.BaseCodename)
+
+			// Usando caminhos vindos do arquivo de conf:
+			mintMirrors, baseMirrors, err := parser.LoadMirrors(config.MirrorsPath, config.BaseMirrorsPath)
+			if err != nil {
+				pterm.Error.Printf("Falha ao carregar arquivos de mirrors: %v\n", err)
+				os.Exit(1)
+			}
+			pterm.Success.Printf("Mirrors carregados: %d Mint | %d Base\n", len(mintMirrors), len(baseMirrors))
+
+			if len(mintMirrors) > 0 && len(baseMirrors) > 0 {
+				fmt.Printf(" \n -> Exemplo Mint: %+v\n", mintMirrors[0])
+				fmt.Printf(" -> Exemplo Base: %+v\n\n", baseMirrors[0])
+			}
 		},
 	}
 

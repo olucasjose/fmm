@@ -6,9 +6,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"fmm/internal/i18n"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"fmm/internal/i18n"
 )
 
 // Execute é o ponto de entrada de roteamento.

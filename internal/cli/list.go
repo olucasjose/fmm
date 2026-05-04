@@ -3,9 +3,9 @@ package cli
 import (
 	"context"
 
+	"fmm/internal/i18n"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"fmm/internal/i18n"
 )
 
 var (
