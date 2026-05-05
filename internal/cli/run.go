@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	"fmm/internal/domain"
 	"fmm/internal/engine"
@@ -17,7 +19,7 @@ import (
 )
 
 var (
-	runLimit       int
+	runLimit       string
 	runMirrors     []string
 	runCountries   []string
 	runApply       bool
@@ -26,6 +28,34 @@ var (
 	runShowErrors  bool
 	runQuiet       bool
 )
+
+func parseSplitLimit(s string) (int, int) {
+	if s == "" {
+		return 0, 0
+	}
+	parts := strings.Split(s, ",")
+	if len(parts) == 1 {
+		v, _ := strconv.Atoi(strings.TrimSpace(parts[0]))
+		return v, v
+	}
+	v1, _ := strconv.Atoi(strings.TrimSpace(parts[0]))
+	v2, _ := strconv.Atoi(strings.TrimSpace(parts[1]))
+	return v1, v2
+}
+
+func parseSplitSpeed(s string) (float64, float64) {
+	if s == "" {
+		return 0, 0
+	}
+	parts := strings.Split(s, ",")
+	if len(parts) == 1 {
+		v := engine.ParseTargetSpeed(strings.TrimSpace(parts[0]))
+		return v, v
+	}
+	v1 := engine.ParseTargetSpeed(strings.TrimSpace(parts[0]))
+	v2 := engine.ParseTargetSpeed(strings.TrimSpace(parts[1]))
+	return v1, v2
+}
 
 func newRunCmd(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
@@ -36,7 +66,6 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				pterm.DisableOutput()
 			}
 
-			// Fail-Fast: Aborta imediatamente se tentar aplicar sem root.
 			if runApply || runUpdateCache {
 				if os.Geteuid() != 0 {
 					pterm.Error.Println("A aplicação de mirrors ou atualização de cache requer privilégios de administrador. Execute o fmm com 'sudo'.")
@@ -48,7 +77,6 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				pterm.Warning.Println("--update-cache implies --apply. Cache will not update.")
 			}
 
-			// --- Setup e Parsing ---
 			codename, err := sysinfo.GetCodename()
 			if err != nil {
 				pterm.Error.Printf("Falha ao detectar OS release: %v\n", err)
@@ -67,39 +95,34 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				os.Exit(1)
 			}
 
-			// --- Lógica Geográfica ---
 			localCountry := geo.DetectLocalCountry()
-
-			// Determina o filtro de países:
-			// Se o user não passou --countries nem --mirrors, rodamos APENAS no país local e globais ("WD")
 			targetCountries := runCountries
 			if len(runCountries) == 0 && len(runMirrors) == 0 {
 				targetCountries = []string{localCountry, "WD"}
 			}
 
+			limitMint, limitBase := parseSplitLimit(runLimit)
+			targetMint, targetBase := parseSplitSpeed(runTargetSpeed)
+
 			pterm.Info.Printf("Iniciando testes de mirrors.\nPaís local detectado: %s\n", localCountry)
 
-			// --- Setup de Benchmark ---
-			filteredMint := domain.FilterMirrors(mintMirrors, targetCountries, runMirrors, runLimit)
-			filteredBase := domain.FilterMirrors(baseMirrors, targetCountries, runMirrors, runLimit)
+			filteredMint := domain.FilterMirrors(mintMirrors, targetCountries, runMirrors, limitMint)
+			filteredBase := domain.FilterMirrors(baseMirrors, targetCountries, runMirrors, limitBase)
 
 			if len(filteredMint) == 0 && len(filteredBase) == 0 {
 				pterm.Warning.Println("Nenhum mirror selecionado para teste.")
 				os.Exit(0)
 			}
 
-			targetSpeedLimit := engine.ParseTargetSpeed(runTargetSpeed)
-
-			runBenchmark := func(list []domain.Mirror, mirrorType string) *engine.Result {
+			runBenchmark := func(list []domain.Mirror, mirrorType string, targetSpeedLimit float64) *engine.Result {
 				pterm.DefaultSection.Printf("Benchmarking %s Mirrors\n", mirrorType)
 
 				var best *engine.Result
 
 				for _, m := range list {
-					// Checa se o usuário cancelou (Ctrl+C)
 					if ctx.Err() != nil {
 						pterm.Warning.Println(i18n.T("interrupted"))
-						os.Exit(130) // 130 = Padrão POSIX para SIGINT
+						os.Exit(130)
 					}
 
 					pterm.Print(pterm.LightBlue(fmt.Sprintf(" %s %s... ", i18n.T("testing"), m.Name)))
@@ -110,19 +133,17 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 						if runShowErrors {
 							pterm.Println(pterm.Red(fmt.Sprintf("[%s]", res.Err.Error())))
 						} else {
-							// Se o erro for nativo de network ("unreachable" ou "obsolete"), nós o traduzimos
 							msg := res.Err.Error()
 							if msg == "unreachable" || msg == "obsolete" {
 								msg = i18n.T(msg)
 							} else {
-								msg = i18n.T("unreachable") // Oculta detalhes do socket
+								msg = i18n.T("unreachable")
 							}
 							pterm.Println(pterm.Red(fmt.Sprintf("[%s]", msg)))
 						}
 						continue
 					}
 
-					// Sucesso
 					speedStr := engine.FormatSpeed(res.Speed)
 					pterm.Println(pterm.Green(speedStr))
 
@@ -130,17 +151,16 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 						best = &res
 					}
 
-					// Checa o Target Speed
 					if targetSpeedLimit > 0 && res.Speed >= targetSpeedLimit {
-						pterm.Success.Printf("Meta de velocidade atingida (>= %s). Encerrando testes para %s.\n", engine.FormatSpeed(targetSpeedLimit), mirrorType)
+						pterm.Success.Printf("Meta atingida (>= %s). Encerrando testes para %s.\n", engine.FormatSpeed(targetSpeedLimit), mirrorType)
 						break
 					}
 				}
 				return best
 			}
 
-			bestMint := runBenchmark(filteredMint, "Mint")
-			bestBase := runBenchmark(filteredBase, "Base")
+			bestMint := runBenchmark(filteredMint, "Mint", targetMint)
+			bestBase := runBenchmark(filteredBase, "Base", targetBase)
 
 			pterm.Println()
 			pterm.DefaultHeader.WithFullWidth().Println("Resultados Finais")
@@ -157,7 +177,6 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				pterm.Error.Println("Nenhum mirror Base válido encontrado.")
 			}
 
-			// Determina qual URL usar (se não testou ou não achou melhor, mantém o default do .conf)
 			finalMintURL := config.MintDefault
 			if bestMint != nil {
 				finalMintURL = bestMint.Mirror.URL
@@ -199,7 +218,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVarP(&runLimit, "limit", "l", 0, i18n.T("flag_limit"))
+	cmd.Flags().StringVarP(&runLimit, "limit", "l", "", i18n.T("flag_limit"))
 	cmd.Flags().StringSliceVarP(&runMirrors, "mirrors", "m", []string{}, i18n.T("flag_mirrors"))
 	cmd.Flags().StringSliceVarP(&runCountries, "countries", "c", []string{}, i18n.T("flag_country"))
 	cmd.Flags().BoolVarP(&runApply, "apply", "a", false, i18n.T("flag_apply"))
