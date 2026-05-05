@@ -7,12 +7,15 @@ import (
 	"strings"
 
 	"fmm/internal/domain"
+	"fmm/internal/geo"
 )
 
 // ParseMirrorsFile interpreta os arquivos '.mirrors' do Mint e injeta a tag de tipo.
 func ParseMirrorsFile(r io.Reader, mType domain.MirrorType) ([]domain.Mirror, error) {
 	var mirrors []domain.Mirror
 	var currentCountry string
+
+	geo.LoadCountries() // Garante que a base do SO está indexada
 
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
@@ -26,8 +29,6 @@ func ParseMirrorsFile(r io.Reader, mType domain.MirrorType) ([]domain.Mirror, er
 			continue
 		}
 
-		// Linhas normais contêm a URL e o Nome
-		// Ignora pacotes de source do ubuntu que a ferramenta original também ignora.
 		if currentCountry != "" && !strings.Contains(line, "ubuntu-ports") {
 			elements := strings.Fields(line)
 			if len(elements) == 0 {
@@ -44,11 +45,15 @@ func ParseMirrorsFile(r io.Reader, mType domain.MirrorType) ([]domain.Mirror, er
 				name = strings.Join(elements[1:], " ")
 			}
 
+			region, subregion := geo.GetRegionInfo(currentCountry)
+
 			mirrors = append(mirrors, domain.Mirror{
-				URL:     url,
-				Country: currentCountry,
-				Name:    name,
-				Type:    mType,
+				URL:       url,
+				Country:   currentCountry,
+				Region:    region,
+				Subregion: subregion,
+				Name:      name,
+				Type:      mType,
 			})
 		}
 	}
@@ -61,7 +66,6 @@ func ParseMirrorsFile(r io.Reader, mType domain.MirrorType) ([]domain.Mirror, er
 
 // LoadMirrors carrega as listas de base e mint a partir dos paths especificados.
 func LoadMirrors(mintPath, basePath string) ([]domain.Mirror, []domain.Mirror, error) {
-	// Carrega mirrors Mint
 	fMint, err := os.Open(mintPath)
 	if err != nil {
 		return nil, nil, err
@@ -72,7 +76,6 @@ func LoadMirrors(mintPath, basePath string) ([]domain.Mirror, []domain.Mirror, e
 		return nil, nil, err
 	}
 
-	// Carrega mirrors Base (Ubuntu/Debian)
 	fBase, err := os.Open(basePath)
 	if err != nil {
 		return nil, nil, err

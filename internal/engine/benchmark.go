@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"time"
 
@@ -22,9 +23,20 @@ const (
 	BaseMaxAgeDays = 14
 )
 
-// client global reutilizável para aproveitar Keep-Alive internamente.
+// client configurado exatamente como o pycurl do mintsources.py
 var httpClient = &http.Client{
-	Timeout: 15 * time.Second,
+	Transport: &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   5 * time.Second, // pycurl CONNECTTIMEOUT
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   5 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	},
 }
 
 // TestMirror orquestra a checagem de staleness e de download de velocidade para um mirror.
@@ -42,13 +54,17 @@ func TestMirror(ctx context.Context, m domain.Mirror, config *parser.MintConfig)
 		maxAgeDays = BaseMaxAgeDays
 	}
 
-	// 1. Checa se o mirror está atualizado (Staleness)
-	if err := checkStaleness(ctx, checkURL, maxAgeDays); err != nil {
+	// 1. Checa se o mirror está atualizado (Timeout total de 30s conforme pycurl)
+	staleCtx, staleCancel := context.WithTimeout(ctx, 30*time.Second)
+	defer staleCancel()
+	if err := checkStaleness(staleCtx, checkURL, maxAgeDays); err != nil {
 		return Result{Mirror: m, Err: err}
 	}
 
-	// 2. Faz o teste real de velocidade
-	speed, err := measureSpeed(ctx, downloadURL)
+	// 2. Faz o teste real de velocidade (Timeout total de 20s conforme pycurl)
+	speedCtx, speedCancel := context.WithTimeout(ctx, 20*time.Second)
+	defer speedCancel()
+	speed, err := measureSpeed(speedCtx, downloadURL)
 	return Result{Mirror: m, Speed: speed, Err: err}
 }
 
@@ -70,7 +86,6 @@ func checkStaleness(ctx context.Context, url string, maxAge int) error {
 
 	lastMod := resp.Header.Get("Last-Modified")
 	if lastMod == "" {
-		// Se não tem header, não conseguimos garantir a idade. Assumimos obsoleto (mesmo default do Mint).
 		return errors.New("obsolete")
 	}
 
@@ -104,11 +119,8 @@ func measureSpeed(ctx context.Context, url string) (float64, error) {
 	}
 
 	start := time.Now()
-	// Lemos o body redirecionando para descarte (não escrevemos em disco) para medir o tráfego em RAM.
-	// O buffer interno de io.Copy se encarrega do chunking.
 	bytesRead, err := io.Copy(io.Discard, resp.Body)
 
-	// Mesmo que haja erro de timeout no final, medimos a velocidade do que foi baixado.
 	elapsed := time.Since(start).Seconds()
 
 	if bytesRead == 0 || elapsed == 0 {
