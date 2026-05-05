@@ -36,6 +36,14 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				pterm.DisableOutput()
 			}
 
+			// Fail-Fast: Aborta imediatamente se tentar aplicar sem root.
+			if runApply || runUpdateCache {
+				if os.Geteuid() != 0 {
+					pterm.Error.Println("A aplicação de mirrors ou atualização de cache requer privilégios de administrador. Execute o fmm com 'sudo'.")
+					os.Exit(1)
+				}
+			}
+
 			if runUpdateCache && !runApply {
 				pterm.Warning.Println("--update-cache implies --apply. Cache will not update.")
 			}
@@ -167,12 +175,6 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				}
 
 				pterm.DefaultSection.Println("Aplicando Alterações")
-
-				// Precisa de root para modificar /etc/apt/
-				if os.Geteuid() != 0 {
-					pterm.Error.Println("Aplicação de mirrors requer privilégios de administrador. Execute fmm com 'sudo'.")
-					os.Exit(1)
-				}
 
 				err := system.ApplyMirrors(ctx, config, finalMintURL, finalBaseURL)
 				if err != nil {
