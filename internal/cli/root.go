@@ -11,12 +11,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// isBypassCommand inspeciona os argumentos para liberar o shell de restrições de root
+func isBypassCommand() bool {
+	if len(os.Args) <= 1 {
+		return true // Permite exibir o menu de ajuda principal
+	}
+	cmd := os.Args[1]
+	// Whitelist de comandos inofensivos e geradores do Cobra
+	return cmd == "help" || cmd == "completion" || cmd == "__complete"
+}
+
 // Execute é o ponto de entrada de roteamento.
 func Execute() {
 	i18n.Init()
 
-	// Bloqueio Global: Exige root para qualquer comando da CLI
-	if os.Geteuid() != 0 {
+	// Bloqueio Global: Exige root, exceto para comandos na whitelist
+	if !isBypassCommand() && os.Geteuid() != 0 {
 		pterm.Error.Println("O fmm requer privilégios de administrador. Execute com 'sudo'.")
 		os.Exit(1)
 	}
