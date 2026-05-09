@@ -15,6 +15,12 @@ import (
 func Execute() {
 	i18n.Init()
 
+	// Bloqueio Global: Exige root para qualquer comando da CLI
+	if os.Geteuid() != 0 {
+		pterm.Error.Println("O fmm requer privilégios de administrador. Execute com 'sudo'.")
+		os.Exit(1)
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

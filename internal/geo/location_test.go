@@ -23,7 +23,7 @@ func TestDetectLocalCountry_Fallback(t *testing.T) {
 
 	for _, tt := range tests {
 		os.Setenv("LANG", tt.envVal)
-		
+
 		// Forçamos o fallback de LANG direto para validação da função de parsing de env
 		langEnv := os.Getenv("LANG")
 		result := "US"

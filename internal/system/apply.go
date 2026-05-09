@@ -28,7 +28,7 @@ func extractOptionalComponents(filepath string, codename string) string {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		
+
 		// Isola a linha do repositório Mint (ignora comentários e mirrors base)
 		if !strings.HasPrefix(line, "#") && strings.HasPrefix(line, "deb") && strings.Contains(line, " "+codename+" ") {
 			parts := strings.Fields(line)

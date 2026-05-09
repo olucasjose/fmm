@@ -66,13 +66,6 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				pterm.DisableOutput()
 			}
 
-			if runApply || runUpdateCache {
-				if os.Geteuid() != 0 {
-					pterm.Error.Println("A aplicação de mirrors ou atualização de cache requer privilégios de administrador. Execute o fmm com 'sudo'.")
-					os.Exit(1)
-				}
-			}
-
 			if runUpdateCache && !runApply {
 				pterm.Warning.Println("--update-cache implies --apply. Cache will not update.")
 			}
