@@ -148,6 +148,9 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 
 			pterm.Info.Printf(i18n.T("testing")+" mirrors.\n"+i18n.T("ranking_country")+": %s\n", localCountry)
 
+			// Obtém data dos mirrors default para check de staleness relativo (como mintsources)
+			defaultInfo := engine.FetchDefaultMirrorInfo(ctx, config)
+
 			// Função de benchmark com ranking
 			type viableResult struct {
 				rank   ranking.MirrorRank
@@ -181,7 +184,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 
 					pterm.Print(pterm.LightBlue(fmt.Sprintf(" %s %s... ", i18n.T("testing"), m.Name)))
 
-					res := engine.TestMirror(ctx, m, config)
+					res := engine.TestMirror(ctx, m, config, defaultInfo)
 					tested[mr.URL] = true
 
 					// Atualiza ranking com resultado
@@ -245,7 +248,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 					Type:      candidate.Type,
 				}
 
-				res := engine.TestMirror(ctx, m, config)
+				res := engine.TestMirror(ctx, m, config, defaultInfo)
 				ranking.UpdateMirrorResult(rankData, candidate.URL, res.Speed, res.Err)
 
 				if res.Err != nil {
