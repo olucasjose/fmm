@@ -119,6 +119,9 @@ func renderRanking() {
 	// Separa por tipo e calcula scores
 	var mintRanks, baseRanks []ranking.MirrorRank
 	for _, mr := range rankData.Mirrors {
+		if mr.TotalTests == 0 {
+			continue
+		}
 		ranking.RecalcScore(mr, userCountry)
 		switch mr.Type {
 		case domain.TypeMint:
