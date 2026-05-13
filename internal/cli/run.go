@@ -114,18 +114,16 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 			}
 
 			localCountry := geo.DetectLocalCountry()
-			targetCountries := runCountries
-			if len(runCountries) == 0 && len(runMirrors) == 0 {
-				targetCountries = []string{localCountry, "WD"}
-			}
 
 			limitMint, limitBase := parseSplitLimit(runLimit)
 			targetMint, targetBase := parseSplitSpeed(runTargetSpeed)
 			viableMint, viableBase := parseSplitViable(runViable)
 
 			// Filtra mirrors conforme flags do usuário
-			filteredMint := domain.FilterMirrors(mintMirrors, targetCountries, runMirrors, limitMint)
-			filteredBase := domain.FilterMirrors(baseMirrors, targetCountries, runMirrors, limitBase)
+			// Sem --countries: testa todos (ranking prioriza por geo factor)
+			// Com --countries: aplica dentro do subconjunto filtrado
+			filteredMint := domain.FilterMirrors(mintMirrors, runCountries, runMirrors, limitMint)
+			filteredBase := domain.FilterMirrors(baseMirrors, runCountries, runMirrors, limitBase)
 
 			if len(filteredMint) == 0 && len(filteredBase) == 0 {
 				pterm.Warning.Println("Nenhum mirror selecionado para teste.")
