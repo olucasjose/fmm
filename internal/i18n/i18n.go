@@ -52,6 +52,8 @@ var dictionary = map[Language]map[string]string{
 		"ranking_header":      "Mirror Ranking",
 		"ranking_empty":       "No ranking data yet. Run 'fmm run' first.",
 		"ranking_updated":     "Updated",
+		"press_enter_stop":   "Press [Enter] to stop and use the best mirrors found.",
+		"stopped_by_user":    "Stopped. Using best mirrors found.",
 	},
 	PT: {
 		"root_desc":    "Fastest Mint Mirror - Teste e aplique mirrors do Linux Mint.",
@@ -89,6 +91,8 @@ var dictionary = map[Language]map[string]string{
 		"ranking_header":      "Ranking de Mirrors",
 		"ranking_empty":       "Sem dados de ranking ainda. Execute 'fmm run' primeiro.",
 		"ranking_updated":     "Atualizado em",
+		"press_enter_stop":   "Pressione [Enter] para parar e usar os melhores mirrors encontrados.",
+		"stopped_by_user":    "Parado. Usando melhores mirrors encontrados.",
 	},
 	ES: {
 		"root_desc":    "Fastest Mint Mirror - Pruebe y aplique mirrors de Linux Mint.",
@@ -126,6 +130,8 @@ var dictionary = map[Language]map[string]string{
 		"ranking_header":      "Ranking de Mirrors",
 		"ranking_empty":       "Sin datos de ranking aún. Ejecute 'fmm run' primero.",
 		"ranking_updated":     "Actualizado",
+		"press_enter_stop":   "Presione [Enter] para detener y usar los mejores mirrors encontrados.",
+		"stopped_by_user":    "Detenido. Usando mejores mirrors encontrados.",
 	},
 }
 

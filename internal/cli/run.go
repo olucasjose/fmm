@@ -151,6 +151,37 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 			// Obtém data dos mirrors default para check de staleness relativo (como mintsources)
 			defaultInfo := engine.FetchDefaultMirrorInfo(ctx, config)
 
+			// Detecta modo interativo: default quando --viable não foi setado explicitamente
+			isInteractive := !cmd.Flags().Changed("viable") && !runQuiet
+
+			// No modo interativo, testa todos (sem limite de viáveis)
+			if isInteractive {
+				viableMint = 0
+				viableBase = 0
+				pterm.Info.Println(i18n.T("press_enter_stop"))
+			}
+
+			// Listener de stdin para modo interativo (Enter para parar)
+			var enterCh chan struct{}
+			if isInteractive {
+				enterCh = make(chan struct{}, 10)
+				go func() {
+					buf := make([]byte, 1)
+					for {
+						n, err := os.Stdin.Read(buf)
+						if err != nil || n == 0 {
+							return
+						}
+						if buf[0] == '\n' || buf[0] == '\r' {
+							select {
+							case enterCh <- struct{}{}:
+							default:
+							}
+						}
+					}
+				}()
+			}
+
 			// Função de benchmark com ranking
 			type viableResult struct {
 				rank   ranking.MirrorRank
@@ -162,6 +193,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 
 				var viables []viableResult
 				tested := make(map[string]bool)
+				var bestSpeed float64
 
 				for _, mr := range list {
 					if ctx.Err() != nil {
@@ -169,7 +201,18 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 						os.Exit(130)
 					}
 
-					if len(viables) >= viableTarget {
+					// Modo interativo: checa Enter
+					if enterCh != nil {
+						select {
+						case <-enterCh:
+							pterm.Info.Println(i18n.T("stopped_by_user"))
+							return viables, tested
+						default:
+						}
+					}
+
+					// Modo --viable: para ao atingir N viáveis
+					if viableTarget > 0 && len(viables) >= viableTarget {
 						break
 					}
 
@@ -206,7 +249,12 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 					}
 
 					speedStr := engine.FormatSpeed(res.Speed)
-					pterm.Println(pterm.Green(speedStr))
+					if res.Speed > bestSpeed {
+						bestSpeed = res.Speed
+						pterm.Println(pterm.Green(speedStr + " ★"))
+					} else {
+						pterm.Println(pterm.Green(speedStr))
+					}
 
 					viables = append(viables, viableResult{rank: mr, result: res})
 
