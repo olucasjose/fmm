@@ -12,6 +12,7 @@ import (
 	"fmm/internal/geo"
 	"fmm/internal/i18n"
 	"fmm/internal/parser"
+	"fmm/internal/ranking"
 	"fmm/internal/sysinfo"
 	"fmm/internal/system"
 	"github.com/pterm/pterm"
@@ -27,6 +28,7 @@ var (
 	runTargetSpeed string
 	runShowErrors  bool
 	runQuiet       bool
+	runViable      string
 )
 
 func parseSplitLimit(s string) (int, int) {
@@ -54,6 +56,29 @@ func parseSplitSpeed(s string) (float64, float64) {
 	}
 	v1 := engine.ParseTargetSpeed(strings.TrimSpace(parts[0]))
 	v2 := engine.ParseTargetSpeed(strings.TrimSpace(parts[1]))
+	return v1, v2
+}
+
+func parseSplitViable(s string) (int, int) {
+	if s == "" {
+		return 5, 5
+	}
+	parts := strings.Split(s, ",")
+	if len(parts) == 1 {
+		v, _ := strconv.Atoi(strings.TrimSpace(parts[0]))
+		if v <= 0 {
+			v = 5
+		}
+		return v, v
+	}
+	v1, _ := strconv.Atoi(strings.TrimSpace(parts[0]))
+	v2, _ := strconv.Atoi(strings.TrimSpace(parts[1]))
+	if v1 <= 0 {
+		v1 = 5
+	}
+	if v2 <= 0 {
+		v2 = 5
+	}
 	return v1, v2
 }
 
@@ -96,9 +121,9 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 
 			limitMint, limitBase := parseSplitLimit(runLimit)
 			targetMint, targetBase := parseSplitSpeed(runTargetSpeed)
+			viableMint, viableBase := parseSplitViable(runViable)
 
-			pterm.Info.Printf("Iniciando testes de mirrors.\nPaís local detectado: %s\n", localCountry)
-
+			// Filtra mirrors conforme flags do usuário
 			filteredMint := domain.FilterMirrors(mintMirrors, targetCountries, runMirrors, limitMint)
 			filteredBase := domain.FilterMirrors(baseMirrors, targetCountries, runMirrors, limitBase)
 
@@ -107,20 +132,62 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				os.Exit(0)
 			}
 
-			runBenchmark := func(list []domain.Mirror, mirrorType string, targetSpeedLimit float64) *engine.Result {
+			// Carrega ranking e faz merge com mirrors filtrados
+			rankingPath := ranking.DefaultPath()
+			rankData, err := ranking.Load(rankingPath)
+			if err != nil {
+				pterm.Warning.Printf("Falha ao carregar ranking: %v. Iniciando ranking novo.\n", err)
+				rankData = &ranking.RankingData{Version: 1, Mirrors: make(map[string]*ranking.MirrorRank)}
+			}
+
+			// Merge aplica ranking dentro do subconjunto filtrado
+			allMirrors := append(filteredMint, filteredBase...)
+			rankedMint, rankedBase := ranking.Merge(rankData, allMirrors, localCountry)
+
+			// Ordena por score
+			ranking.SortByScore(rankedMint)
+			ranking.SortByScore(rankedBase)
+
+			pterm.Info.Printf(i18n.T("testing")+" mirrors.\n"+i18n.T("ranking_country")+": %s\n", localCountry)
+
+			// Função de benchmark com ranking
+			type viableResult struct {
+				rank   ranking.MirrorRank
+				result engine.Result
+			}
+
+			runBenchmark := func(list []ranking.MirrorRank, mirrorType string, targetSpeedLimit float64, viableTarget int) ([]viableResult, map[string]bool) {
 				pterm.DefaultSection.Printf("Benchmarking %s Mirrors\n", mirrorType)
 
-				var best *engine.Result
+				var viables []viableResult
+				tested := make(map[string]bool)
 
-				for _, m := range list {
+				for _, mr := range list {
 					if ctx.Err() != nil {
 						pterm.Warning.Println(i18n.T("interrupted"))
 						os.Exit(130)
 					}
 
+					if len(viables) >= viableTarget {
+						break
+					}
+
+					m := domain.Mirror{
+						URL:       mr.URL,
+						Country:   mr.Country,
+						Region:    mr.Region,
+						Subregion: mr.Subregion,
+						Name:      mr.Name,
+						Type:      mr.Type,
+					}
+
 					pterm.Print(pterm.LightBlue(fmt.Sprintf(" %s %s... ", i18n.T("testing"), m.Name)))
 
 					res := engine.TestMirror(ctx, m, config)
+					tested[mr.URL] = true
+
+					// Atualiza ranking com resultado
+					ranking.UpdateMirrorResult(rankData, mr.URL, res.Speed, res.Err)
 
 					if res.Err != nil {
 						if runShowErrors {
@@ -140,35 +207,96 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 					speedStr := engine.FormatSpeed(res.Speed)
 					pterm.Println(pterm.Green(speedStr))
 
-					if best == nil || res.Speed > best.Speed {
-						best = &res
-					}
+					viables = append(viables, viableResult{rank: mr, result: res})
 
 					if targetSpeedLimit > 0 && res.Speed >= targetSpeedLimit {
-						pterm.Success.Printf("Meta atingida (>= %s). Encerrando testes para %s.\n", engine.FormatSpeed(targetSpeedLimit), mirrorType)
+						pterm.Success.Printf(i18n.T("target_reached")+" (>= %s).\n", engine.FormatSpeed(targetSpeedLimit))
 						break
 					}
 				}
-				return best
+
+				return viables, tested
 			}
 
-			bestMint := runBenchmark(filteredMint, "Mint", targetMint)
-			bestBase := runBenchmark(filteredBase, "Base", targetBase)
+			viablesMint, testedMint := runBenchmark(rankedMint, "Mint", targetMint, viableMint)
+			viablesBase, testedBase := runBenchmark(rankedBase, "Base", targetBase, viableBase)
 
+			// Reabilitação: testa 1 mirror do quartil inferior por tipo
+			testRehab := func(mirrorType domain.MirrorType, typeLabel string, tested map[string]bool) {
+				var allRanked []ranking.MirrorRank
+				for _, mr := range rankData.Mirrors {
+					if mr.Type == mirrorType {
+						ranking.RecalcScore(mr, localCountry)
+						allRanked = append(allRanked, *mr)
+					}
+				}
+
+				candidate := ranking.SelectRehabCandidate(allRanked, mirrorType, tested)
+				if candidate == nil {
+					return
+				}
+
+				pterm.Info.Printf(i18n.T("rehab_testing")+" %s (%s)\n", candidate.Name, typeLabel)
+
+				m := domain.Mirror{
+					URL:       candidate.URL,
+					Country:   candidate.Country,
+					Region:    candidate.Region,
+					Subregion: candidate.Subregion,
+					Name:      candidate.Name,
+					Type:      candidate.Type,
+				}
+
+				res := engine.TestMirror(ctx, m, config)
+				ranking.UpdateMirrorResult(rankData, candidate.URL, res.Speed, res.Err)
+
+				if res.Err != nil {
+					pterm.Println(pterm.Yellow(fmt.Sprintf("  %s: %s [%s]", i18n.T("rehab_result"), candidate.Name, i18n.T(res.Err.Error()))))
+				} else {
+					pterm.Println(pterm.Green(fmt.Sprintf("  %s: %s [%s]", i18n.T("rehab_result"), candidate.Name, engine.FormatSpeed(res.Speed))))
+				}
+			}
+
+			testRehab(domain.TypeMint, "Mint", testedMint)
+			testRehab(domain.TypeBase, "Base", testedBase)
+
+			// Salva ranking atualizado
+			if err := ranking.Save(rankingPath, rankData); err != nil {
+				pterm.Warning.Printf("Falha ao salvar ranking: %v\n", err)
+			}
+
+			// Resultados finais
 			pterm.Println()
-			pterm.DefaultHeader.WithFullWidth().Println("Resultados Finais")
+			pterm.DefaultHeader.WithFullWidth().Println(i18n.T("final_results"))
+
+			var bestMint, bestBase *engine.Result
+			for _, v := range viablesMint {
+				if bestMint == nil || v.result.Speed > bestMint.Speed {
+					r := v.result
+					bestMint = &r
+				}
+			}
+			for _, v := range viablesBase {
+				if bestBase == nil || v.result.Speed > bestBase.Speed {
+					r := v.result
+					bestBase = &r
+				}
+			}
 
 			if bestMint != nil {
-				pterm.Info.Printf("Melhor Mint: %s - %s\n", bestMint.Mirror.URL, engine.FormatSpeed(bestMint.Speed))
+				pterm.Info.Printf(i18n.T("best_mint")+": %s - %s\n", bestMint.Mirror.URL, engine.FormatSpeed(bestMint.Speed))
 			} else {
-				pterm.Error.Println("Nenhum mirror Mint válido encontrado.")
+				pterm.Error.Println(i18n.T("no_mint_found"))
 			}
 
 			if bestBase != nil {
-				pterm.Info.Printf("Melhor Base: %s - %s\n", bestBase.Mirror.URL, engine.FormatSpeed(bestBase.Speed))
+				pterm.Info.Printf(i18n.T("best_base")+": %s - %s\n", bestBase.Mirror.URL, engine.FormatSpeed(bestBase.Speed))
 			} else {
-				pterm.Error.Println("Nenhum mirror Base válido encontrado.")
+				pterm.Error.Println(i18n.T("no_base_found"))
 			}
+
+			pterm.Info.Printf(i18n.T("viable_summary")+": Mint %d/%d, Base %d/%d\n",
+				len(viablesMint), viableMint, len(viablesBase), viableBase)
 
 			finalMintURL := config.MintDefault
 			if bestMint != nil {
@@ -219,6 +347,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&runTargetSpeed, "target-speed", "t", "", i18n.T("flag_target"))
 	cmd.Flags().BoolVarP(&runShowErrors, "show-errors", "e", false, i18n.T("flag_errs"))
 	cmd.Flags().BoolVarP(&runQuiet, "quiet", "q", false, i18n.T("flag_quiet"))
+	cmd.Flags().StringVarP(&runViable, "viable", "v", "", i18n.T("flag_viable"))
 
 	return cmd
 }
