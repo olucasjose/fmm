@@ -28,7 +28,7 @@ func Execute() {
 	i18n.Init()
 
 	if !isBypassCommand() && os.Geteuid() != 0 {
-		pterm.Error.Println("O fmm requer privilégios de administrador. Execute com 'sudo'.")
+		pterm.Error.Println(i18n.T("require_sudo"))
 		os.Exit(1)
 	}
 
