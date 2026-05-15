@@ -1,3 +1,6 @@
+// Copyright (C) 2026 olucasjose
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package cli
 
 import (
@@ -12,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const Version = "1.2.1"
+const Version = "1.3.0"
 
 func isBypassCommand() bool {
 	if len(os.Args) <= 1 {
