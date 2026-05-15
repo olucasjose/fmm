@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const Version = "1.2.0"
+const Version = "1.2.1"
 
 func isBypassCommand() bool {
 	if len(os.Args) <= 1 {
