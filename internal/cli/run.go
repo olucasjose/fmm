@@ -130,7 +130,6 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				os.Exit(0)
 			}
 
-			// Carrega ranking e faz merge com mirrors filtrados
 			rankingPath := ranking.DefaultPath()
 			rankData, err := ranking.Load(rankingPath)
 			if err != nil {
@@ -138,11 +137,9 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				rankData = &ranking.RankingData{Version: 1, Mirrors: make(map[string]*ranking.MirrorRank)}
 			}
 
-			// Merge aplica ranking dentro do subconjunto filtrado
 			allMirrors := append(filteredMint, filteredBase...)
 			rankedMint, rankedBase := ranking.Merge(rankData, allMirrors, localCountry)
 
-			// Ordena por score
 			ranking.SortByScore(rankedMint)
 			ranking.SortByScore(rankedBase)
 
@@ -182,7 +179,6 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				}()
 			}
 
-			// Função de benchmark com ranking
 			type viableResult struct {
 				rank   ranking.MirrorRank
 				result engine.Result
@@ -201,7 +197,6 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 						os.Exit(130)
 					}
 
-					// Modo interativo: checa Enter
 					if enterCh != nil {
 						select {
 						case <-enterCh:
@@ -211,7 +206,6 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 						}
 					}
 
-					// Modo --viable: para ao atingir N viáveis
 					if viableTarget > 0 && len(viables) >= viableTarget {
 						break
 					}
@@ -230,7 +224,6 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 					res := engine.TestMirror(ctx, m, config, defaultInfo)
 					tested[mr.URL] = true
 
-					// Atualiza ranking com resultado
 					ranking.UpdateMirrorResult(rankData, mr.URL, res.Speed, res.Err)
 
 					if res.Err != nil {
@@ -309,12 +302,10 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 			testRehab(domain.TypeMint, "Mint", testedMint)
 			testRehab(domain.TypeBase, "Base", testedBase)
 
-			// Salva ranking atualizado
 			if err := ranking.Save(rankingPath, rankData); err != nil {
 				pterm.Warning.Println(i18n.T("err_save_ranking", err))
 			}
 
-			// Resultados finais
 			pterm.Println()
 			pterm.DefaultHeader.WithFullWidth().Println(i18n.T("final_results"))
 

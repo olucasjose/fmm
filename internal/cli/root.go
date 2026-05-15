@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Versão atual do sistema
 const Version = "1.2.0"
 
 func isBypassCommand() bool {
@@ -49,7 +48,6 @@ func Execute() {
 		Version: Version,
 	}
 
-	// Customização da saída de versão para o padrão da ferramenta
 	rootCmd.SetVersionTemplate(fmt.Sprintf("fmm version %s\n", Version))
 
 	rootCmd.AddCommand(newRunCmd(ctx))

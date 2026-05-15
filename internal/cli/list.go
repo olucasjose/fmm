@@ -53,11 +53,11 @@ func newListCmd(ctx context.Context) *cobra.Command {
 				os.Exit(1)
 			}
 
-			// Filtra
+
 			mintFiltered := domain.FilterForList(mintMirrors, listCountries, listRegions)
 			baseFiltered := domain.FilterForList(baseMirrors, listCountries, listRegions)
 
-			// Ordenação alfabética pelo Nome ignorando Case Sensitive
+
 			sortByName := func(mirrors []domain.Mirror) {
 				sort.Slice(mirrors, func(i, j int) bool {
 					return strings.ToLower(mirrors[i].Name) < strings.ToLower(mirrors[j].Name)
@@ -67,7 +67,7 @@ func newListCmd(ctx context.Context) *cobra.Command {
 			sortByName(mintFiltered)
 			sortByName(baseFiltered)
 
-			// Renderiza em Tabela
+
 			renderTable := func(title string, mirrors []domain.Mirror) {
 				pterm.DefaultSection.Println(i18n.T("list_section", title, len(mirrors)))
 				if len(mirrors) == 0 {
@@ -84,7 +84,7 @@ func newListCmd(ctx context.Context) *cobra.Command {
 				pterm.DefaultTable.WithHasHeader().WithData(tableData).Render()
 			}
 
-			// Mint primeiro, Base depois
+
 			renderTable("Mint", mintFiltered)
 			pterm.Println()
 			renderTable("Base", baseFiltered)
@@ -116,7 +116,7 @@ func renderRanking() {
 		userCountry = geo.DetectLocalCountry()
 	}
 
-	// Separa por tipo e calcula scores
+
 	var mintRanks, baseRanks []ranking.MirrorRank
 	for _, mr := range rankData.Mirrors {
 		if mr.TotalTests == 0 {

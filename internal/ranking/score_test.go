@@ -10,10 +10,10 @@ import (
 
 func TestNormalizeSpeed(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    float64
-		wantMin  float64
-		wantMax  float64
+		name    string
+		input   float64
+		wantMin float64
+		wantMax float64
 	}{
 		{"Zero", 0, 0, 0},
 		{"Negative", -100, 0, 0},

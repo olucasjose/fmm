@@ -13,10 +13,8 @@ const (
 	WeightReliability = 0.30
 	WeightGeo         = 0.20
 
-	// EMA
 	EMAAlpha = 0.3
 
-	// Normalização logarítmica de velocidade
 	// 100 MB/s como referência de teto
 	RefSpeedKBps = 102400.0
 )

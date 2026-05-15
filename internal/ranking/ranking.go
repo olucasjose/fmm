@@ -14,17 +14,17 @@ import (
 
 // MirrorRank contém os dados cumulativos de um mirror no ranking.
 type MirrorRank struct {
-	URL             string           `json:"url"`
+	URL             string            `json:"url"`
 	Type            domain.MirrorType `json:"type"`
-	Country         string           `json:"country"`
-	Region          string           `json:"region"`
-	Subregion       string           `json:"subregion"`
-	Name            string           `json:"name"`
-	TotalTests      int              `json:"total_tests"`
-	SuccessfulTests int              `json:"successful_tests"`
-	LastStatus      string           `json:"last_status"`
-	LastTested      time.Time        `json:"last_tested"`
-	EMASpeed        float64          `json:"ema_speed"`
+	Country         string            `json:"country"`
+	Region          string            `json:"region"`
+	Subregion       string            `json:"subregion"`
+	Name            string            `json:"name"`
+	TotalTests      int               `json:"total_tests"`
+	SuccessfulTests int               `json:"successful_tests"`
+	LastStatus      string            `json:"last_status"`
+	LastTested      time.Time         `json:"last_tested"`
+	EMASpeed        float64           `json:"ema_speed"`
 
 	// Campos computados (não persistidos)
 	GeoFactor float64 `json:"-"`
@@ -117,7 +117,6 @@ func Merge(ranking *RankingData, mirrors []domain.Mirror, userCountry string) (m
 	geo.LoadCountries()
 	ranking.UserCountry = userCountry
 
-	// Marca todos os mirrors do disco como "vistos"
 	seen := make(map[string]bool)
 
 	for _, m := range mirrors {
@@ -125,7 +124,7 @@ func Merge(ranking *RankingData, mirrors []domain.Mirror, userCountry string) (m
 
 		rank, exists := ranking.Mirrors[m.URL]
 		if !exists {
-			// Mirror novo
+
 			rank = &MirrorRank{
 				URL:        m.URL,
 				Type:       m.Type,
@@ -137,7 +136,7 @@ func Merge(ranking *RankingData, mirrors []domain.Mirror, userCountry string) (m
 			}
 			ranking.Mirrors[m.URL] = rank
 		} else {
-			// Atualiza metadados que podem ter mudado na lista upstream
+
 			rank.Name = m.Name
 			rank.Country = m.Country
 			rank.Region = m.Region
@@ -145,7 +144,6 @@ func Merge(ranking *RankingData, mirrors []domain.Mirror, userCountry string) (m
 			rank.Type = m.Type
 		}
 
-		// Calcula campos computados
 		rank.GeoFactor = CalcGeoFactor(rank.Country, userCountry)
 		speedNorm := NormalizeSpeed(rank.EMASpeed)
 		reliability := CalcReliability(rank.SuccessfulTests, rank.TotalTests)
