@@ -1,6 +1,6 @@
-# FMM (Fast Mint Mirrors)
+# FMM (Fastest Mint Mirrors)
 
-FMM is a fast and interactive mirror ranking and selection tool for Linux Mint.
+FMM is the fastest and most interactive mirror ranking and selection tool for Linux Mint.
 
 ## License & Credits
 
