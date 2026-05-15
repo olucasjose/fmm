@@ -92,24 +92,24 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 			}
 
 			if runUpdateCache && !runApply {
-				pterm.Warning.Println("--update-cache implies --apply. Cache will not update.")
+				pterm.Warning.Println(i18n.T("warn_update_no_apply"))
 			}
 
 			codename, err := sysinfo.GetCodename()
 			if err != nil {
-				pterm.Error.Printf("Falha ao detectar OS release: %v\n", err)
+				pterm.Error.Println(i18n.T("err_os_release", err))
 				os.Exit(1)
 			}
 
 			config, err := parser.LoadConfig(codename)
 			if err != nil {
-				pterm.Error.Printf("Falha ao carregar mintsources.conf: %v\n", err)
+				pterm.Error.Println(i18n.T("err_load_config", err))
 				os.Exit(1)
 			}
 
 			mintMirrors, baseMirrors, err := parser.LoadMirrors(config.MirrorsPath, config.BaseMirrorsPath)
 			if err != nil {
-				pterm.Error.Printf("Falha ao carregar arquivos de mirrors: %v\n", err)
+				pterm.Error.Println(i18n.T("err_load_mirrors", err))
 				os.Exit(1)
 			}
 
@@ -126,7 +126,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 			filteredBase := domain.FilterMirrors(baseMirrors, runCountries, runMirrors, limitBase)
 
 			if len(filteredMint) == 0 && len(filteredBase) == 0 {
-				pterm.Warning.Println("Nenhum mirror selecionado para teste.")
+				pterm.Warning.Println(i18n.T("warn_no_mirrors_selected"))
 				os.Exit(0)
 			}
 
@@ -134,7 +134,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 			rankingPath := ranking.DefaultPath()
 			rankData, err := ranking.Load(rankingPath)
 			if err != nil {
-				pterm.Warning.Printf("Falha ao carregar ranking: %v. Iniciando ranking novo.\n", err)
+				pterm.Warning.Println(i18n.T("err_load_ranking", err))
 				rankData = &ranking.RankingData{Version: 1, Mirrors: make(map[string]*ranking.MirrorRank)}
 			}
 
@@ -146,7 +146,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 			ranking.SortByScore(rankedMint)
 			ranking.SortByScore(rankedBase)
 
-			pterm.Info.Printf(i18n.T("testing")+" mirrors.\n"+i18n.T("ranking_country")+": %s\n", localCountry)
+			pterm.Info.Println(i18n.T("testing_mirrors_country", localCountry))
 
 			// Obtém data dos mirrors default para check de staleness relativo (como mintsources)
 			defaultInfo := engine.FetchDefaultMirrorInfo(ctx, config)
@@ -189,7 +189,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 			}
 
 			runBenchmark := func(list []ranking.MirrorRank, mirrorType string, targetSpeedLimit float64, viableTarget int) ([]viableResult, map[string]bool) {
-				pterm.DefaultSection.Printf("Benchmarking %s Mirrors\n", mirrorType)
+				pterm.DefaultSection.Println(i18n.T("benchmarking_section", mirrorType))
 
 				var viables []viableResult
 				tested := make(map[string]bool)
@@ -225,7 +225,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 						Type:      mr.Type,
 					}
 
-					pterm.Print(pterm.LightBlue(fmt.Sprintf(" %s %s... ", i18n.T("testing"), m.Name)))
+					pterm.Print(pterm.LightBlue(i18n.T("testing_mirror", m.Name)))
 
 					res := engine.TestMirror(ctx, m, config, defaultInfo)
 					tested[mr.URL] = true
@@ -259,7 +259,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 					viables = append(viables, viableResult{rank: mr, result: res})
 
 					if targetSpeedLimit > 0 && res.Speed >= targetSpeedLimit {
-						pterm.Success.Printf(i18n.T("target_reached")+" (>= %s).\n", engine.FormatSpeed(targetSpeedLimit))
+						pterm.Success.Println(i18n.T("target_reached", engine.FormatSpeed(targetSpeedLimit)))
 						break
 					}
 				}
@@ -285,7 +285,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 					return
 				}
 
-				pterm.Info.Printf(i18n.T("rehab_testing")+" %s (%s)\n", candidate.Name, typeLabel)
+				pterm.Info.Println(i18n.T("rehab_testing", candidate.Name, typeLabel))
 
 				m := domain.Mirror{
 					URL:       candidate.URL,
@@ -300,9 +300,9 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				ranking.UpdateMirrorResult(rankData, candidate.URL, res.Speed, res.Err)
 
 				if res.Err != nil {
-					pterm.Println(pterm.Yellow(fmt.Sprintf("  %s: %s [%s]", i18n.T("rehab_result"), candidate.Name, i18n.T(res.Err.Error()))))
+					pterm.Println(pterm.Yellow(i18n.T("rehab_result_fail", candidate.Name, res.Err.Error())))
 				} else {
-					pterm.Println(pterm.Green(fmt.Sprintf("  %s: %s [%s]", i18n.T("rehab_result"), candidate.Name, engine.FormatSpeed(res.Speed))))
+					pterm.Println(pterm.Green(i18n.T("rehab_result_ok", candidate.Name, engine.FormatSpeed(res.Speed))))
 				}
 			}
 
@@ -311,7 +311,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 
 			// Salva ranking atualizado
 			if err := ranking.Save(rankingPath, rankData); err != nil {
-				pterm.Warning.Printf("Falha ao salvar ranking: %v\n", err)
+				pterm.Warning.Println(i18n.T("err_save_ranking", err))
 			}
 
 			// Resultados finais
@@ -333,19 +333,19 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 			}
 
 			if bestMint != nil {
-				pterm.Info.Printf(i18n.T("best_mint")+": %s - %s\n", bestMint.Mirror.URL, engine.FormatSpeed(bestMint.Speed))
+				pterm.Info.Println(i18n.T("best_mint", bestMint.Mirror.URL, engine.FormatSpeed(bestMint.Speed)))
 			} else {
 				pterm.Error.Println(i18n.T("no_mint_found"))
 			}
 
 			if bestBase != nil {
-				pterm.Info.Printf(i18n.T("best_base")+": %s - %s\n", bestBase.Mirror.URL, engine.FormatSpeed(bestBase.Speed))
+				pterm.Info.Println(i18n.T("best_base", bestBase.Mirror.URL, engine.FormatSpeed(bestBase.Speed)))
 			} else {
 				pterm.Error.Println(i18n.T("no_base_found"))
 			}
 
-			pterm.Info.Printf(i18n.T("viable_summary")+": Mint %d/%d, Base %d/%d\n",
-				len(viablesMint), viableMint, len(viablesBase), viableBase)
+			pterm.Info.Println(i18n.T("viable_summary",
+				len(viablesMint), viableMint, len(viablesBase), viableBase))
 
 			finalMintURL := config.MintDefault
 			if bestMint != nil {
@@ -359,29 +359,29 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 
 			if runApply {
 				if bestMint == nil && bestBase == nil {
-					pterm.Warning.Println("Nenhum mirror testado teve sucesso. O sources.list será mantido intacto para sua segurança.")
+					pterm.Warning.Println(i18n.T("warn_no_success"))
 					os.Exit(1)
 				}
 
-				pterm.DefaultSection.Println("Aplicando Alterações")
+				pterm.DefaultSection.Println(i18n.T("apply_section"))
 
 				err := system.ApplyMirrors(ctx, config, finalMintURL, finalBaseURL)
 				if err != nil {
-					pterm.Error.Printf("Falha ao modificar o sistema: %v\n", err)
+					pterm.Error.Println(i18n.T("err_system_modify", err))
 					os.Exit(1)
 				}
 
-				pterm.Success.Println("Mirrors aplicados com sucesso! Backup salvo em .bak")
+				pterm.Success.Println(i18n.T("apply_success"))
 
 				if runUpdateCache {
-					pterm.Info.Println("Atualizando cache do APT...")
+					pterm.Info.Println(i18n.T("apply_updating_cache"))
 					if err := system.UpdateCache(ctx); err != nil {
-						pterm.Error.Printf("O apt-get update falhou: %v\n", err)
+						pterm.Error.Println(i18n.T("err_apt_update", err))
 					} else {
-						pterm.Success.Println("Cache atualizado com sucesso.")
+						pterm.Success.Println(i18n.T("apply_cache_updated"))
 					}
 				} else {
-					pterm.Warning.Println("Lembre-se de rodar 'sudo apt-get update' para atualizar o cache.")
+					pterm.Warning.Println(i18n.T("warn_run_apt_update"))
 				}
 			}
 

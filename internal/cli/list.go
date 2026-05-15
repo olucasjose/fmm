@@ -37,19 +37,19 @@ func newListCmd(ctx context.Context) *cobra.Command {
 
 			codename, err := sysinfo.GetCodename()
 			if err != nil {
-				pterm.Error.Printf("Falha ao detectar OS release: %v\n", err)
+				pterm.Error.Println(i18n.T("err_os_release", err))
 				os.Exit(1)
 			}
 
 			config, err := parser.LoadConfig(codename)
 			if err != nil {
-				pterm.Error.Printf("Falha ao carregar mintsources.conf: %v\n", err)
+				pterm.Error.Println(i18n.T("err_load_config", err))
 				os.Exit(1)
 			}
 
 			mintMirrors, baseMirrors, err := parser.LoadMirrors(config.MirrorsPath, config.BaseMirrorsPath)
 			if err != nil {
-				pterm.Error.Printf("Falha ao carregar arquivos de mirrors: %v\n", err)
+				pterm.Error.Println(i18n.T("err_load_mirrors", err))
 				os.Exit(1)
 			}
 
@@ -69,14 +69,14 @@ func newListCmd(ctx context.Context) *cobra.Command {
 
 			// Renderiza em Tabela
 			renderTable := func(title string, mirrors []domain.Mirror) {
-				pterm.DefaultSection.Printf("%s Mirrors (%d)\n", title, len(mirrors))
+				pterm.DefaultSection.Println(i18n.T("list_section", title, len(mirrors)))
 				if len(mirrors) == 0 {
-					pterm.Warning.Println("Nenhum mirror encontrado com os filtros aplicados.")
+					pterm.Warning.Println(i18n.T("list_empty_filter"))
 					return
 				}
 
 				tableData := pterm.TableData{
-					{"Nome", "URL", "País", "Região", "Sub-Região"},
+					{i18n.T("table_header_name"), i18n.T("table_header_url"), i18n.T("table_header_country"), i18n.T("table_header_region"), i18n.T("table_header_subregion")},
 				}
 				for _, m := range mirrors {
 					tableData = append(tableData, []string{m.Name, m.URL, m.Country, m.Region, m.Subregion})
@@ -102,7 +102,7 @@ func renderRanking() {
 	rankingPath := ranking.DefaultPath()
 	rankData, err := ranking.Load(rankingPath)
 	if err != nil {
-		pterm.Error.Printf("Falha ao carregar ranking: %v\n", err)
+		pterm.Error.Println(i18n.T("err_load_ranking", err))
 		os.Exit(1)
 	}
 
@@ -135,7 +135,7 @@ func renderRanking() {
 	ranking.SortByScore(baseRanks)
 
 	renderRankTable := func(title string, ranks []ranking.MirrorRank) {
-		pterm.DefaultSection.Printf("%s %s (%d)\n", i18n.T("ranking_header"), title, len(ranks))
+		pterm.DefaultSection.Println(i18n.T("ranking_header", title, len(ranks)))
 
 		if len(ranks) == 0 {
 			pterm.Warning.Println(i18n.T("ranking_empty"))
@@ -143,7 +143,7 @@ func renderRanking() {
 		}
 
 		tableData := pterm.TableData{
-			{"#", "Mirror", "País", "Vel. (EMA)", "Conf.", "Geo", "Score", "T", "S", "F", "Último Teste"},
+			{"#", "Mirror", i18n.T("table_header_country"), i18n.T("table_header_speed"), i18n.T("table_header_conf"), i18n.T("table_header_geo"), i18n.T("table_header_score"), i18n.T("table_header_tests"), i18n.T("table_header_successes"), i18n.T("table_header_failures"), i18n.T("table_header_last_tested")},
 		}
 
 		for i, r := range ranks {
@@ -179,7 +179,7 @@ func renderRanking() {
 	}
 
 	if !rankData.UpdatedAt.IsZero() {
-		pterm.Info.Printf("%s: %s\n", i18n.T("ranking_updated"), rankData.UpdatedAt.Format("2006-01-02 15:04"))
+		pterm.Info.Println(i18n.T("ranking_updated", rankData.UpdatedAt.Format("2006-01-02 15:04")))
 	}
 
 	renderRankTable("Mint", mintRanks)
@@ -187,5 +187,5 @@ func renderRanking() {
 	renderRankTable("Base", baseRanks)
 
 	pterm.Println()
-	pterm.Info.Println("T=Testes S=Sucessos F=Falhas Conf.=Confiabilidade Geo=Proximidade")
+	pterm.Info.Println(i18n.T("ranking_legend"))
 }

@@ -28,7 +28,7 @@ func newRankingCmd(ctx context.Context) *cobra.Command {
 			}
 
 			if err := os.Remove(path); err != nil {
-				pterm.Error.Printf("Falha ao remover ranking: %v\n", err)
+				pterm.Error.Println(i18n.T("err_remove_ranking", err))
 				os.Exit(1)
 			}
 
