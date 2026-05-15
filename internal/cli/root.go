@@ -13,7 +13,7 @@ import (
 )
 
 // Versão atual do sistema
-const Version = "1.1.0"
+const Version = "1.2.0"
 
 func isBypassCommand() bool {
 	if len(os.Args) <= 1 {
