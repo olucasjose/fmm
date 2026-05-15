@@ -33,17 +33,31 @@ cd fmm
 
 O FMM exige privilégios `sudo` para ações que modificam as configurações do sistema (como `run`), mas os comandos informativos podem ser executados por um usuário comum.
 
+### Comandos Principais & Flags
+
 - **Execute o fluxo principal de teste e atualização de mirrors:**
   ```bash
-  sudo fmm run
+  sudo fmm run [flags]
   ```
+  **Principais Flags para `run`:**
+  - `-a, --apply`: Aplica os mirrors mais rápidos automaticamente no sistema.
+  - `-u, --update-cache`: Atualiza o cache do APT (`apt update`) logo após aplicar os mirrors.
+  - `-c, --countries <lista>`: Filtra mirrors por um código de país específico (ex: `BR,US`).
+  - `-l, --limit <número>`: Limita a quantidade de mirrors que serão testados.
+  - `-v, --viable <número>`: Para os testes após encontrar uma quantidade específica de mirrors viáveis.
+  - `-t, --target-speed <velocidade>`: Para de testar assim que algum mirror alcançar esta velocidade alvo (ex: `10mbps`).
+  - `-e, --show-errors`: Mostra detalhes dos erros de conexão durante os testes.
+  - `-q, --quiet`: Oculta toda a saída visual (útil para automação via cronjob).
 
 - **Liste os mirrors disponíveis:**
   ```bash
-  fmm list
+  fmm list [flags]
   ```
+  **Principais Flags para `list`:**
+  - `-c, --countries <lista>`: Filtra a lista exibindo apenas os países especificados.
+  - `-r, --regions <lista>`: Filtra a lista exibindo apenas as regiões/continentes especificados.
 
-- **Mostre o ranking atual de mirrors (apenas testa sem aplicar no sistema):**
+- **Mostre o ranking atual de mirrors (histórico de testes):**
   ```bash
   fmm ranking
   ```
