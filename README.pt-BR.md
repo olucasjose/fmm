@@ -56,10 +56,11 @@ O FMM exige privilégios `sudo` para ações que modificam as configurações do
   **Principais Flags para `list`:**
   - `-c, --countries <lista>`: Filtra a lista exibindo apenas os países especificados.
   - `-r, --regions <lista>`: Filtra a lista exibindo apenas as regiões/continentes especificados.
+  - `--ranking`: Mostra o histórico de testes e pontuação dos mirrors (ranking) em vez da lista padrão.
 
-- **Mostre o ranking atual de mirrors (histórico de testes):**
+- **Limpe o histórico de testes (ranking):**
   ```bash
-  fmm ranking
+  fmm ranking reset
   ```
 
 - **Exiba a ajuda e os comandos disponíveis:**

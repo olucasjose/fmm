@@ -56,10 +56,11 @@ FMM requires `sudo` privileges for actions that modify system configurations (li
   **Key Flags for `list`:**
   - `-c, --countries <list>`: Filter the list by country codes.
   - `-r, --regions <list>`: Filter the list by regions.
+  - `--ranking`: Show the historical benchmark ranking instead of the raw mirror list.
 
-- **Show the current mirror ranking (benchmark history):**
+- **Reset the mirror benchmark history:**
   ```bash
-  fmm ranking
+  fmm ranking reset
   ```
 
 - **Show help and available commands:**
