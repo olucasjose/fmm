@@ -6,6 +6,7 @@ package cli
 import (
 	"context"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -20,6 +21,13 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
+
+// stty runs an stty command connected to the real terminal (os.Stdin).
+func stty(args ...string) {
+	cmd := exec.Command("stty", args...)
+	cmd.Stdin = os.Stdin
+	_ = cmd.Run()
+}
 
 var (
 	runLimit       string
@@ -163,6 +171,10 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 			// Listener de stdin para modo interativo (Enter para parar)
 			var enterCh chan struct{}
 			if isInteractive {
+				// Desabilita echo do terminal para que o Enter não insira
+				// uma nova linha visível e desalinhe o pterm.Area.
+				stty("-echo")
+
 				enterCh = make(chan struct{}, 10)
 				go func() {
 					buf := make([]byte, 1)
@@ -205,6 +217,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 						if lb != nil {
 							lb.stop()
 						}
+						stty("echo")
 						pterm.Warning.Println(i18n.T("interrupted"))
 						os.Exit(130)
 					}
@@ -277,6 +290,11 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 
 			viablesMint, testedMint := runBenchmark(rankedMint, "Mint", targetMint, viableMint)
 			viablesBase, testedBase := runBenchmark(rankedBase, "Base", targetBase, viableBase)
+
+			// Restaura echo do terminal após os benchmarks.
+			if isInteractive {
+				stty("echo")
+			}
 
 			// Reabilitação: testa 1 mirror do quartil inferior por tipo
 			testRehab := func(mirrorType domain.MirrorType, typeLabel string, tested map[string]bool) {

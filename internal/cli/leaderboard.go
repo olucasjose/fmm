@@ -34,8 +34,10 @@ type leaderboard struct {
 }
 
 // newLeaderboard creates and starts the live area printer.
+// The area is configured with RemoveWhenDone so Stop() clears all dynamic
+// content, and the final state is printed as static text separately.
 func newLeaderboard(mirrorType string, total int) (*leaderboard, error) {
-	area, err := pterm.DefaultArea.Start()
+	area, err := pterm.DefaultArea.WithRemoveWhenDone(true).Start()
 	if err != nil {
 		return nil, err
 	}
@@ -64,17 +66,17 @@ func (lb *leaderboard) addResult(name string, speed float64) {
 	lb.render()
 }
 
-// stop finalises the area printer, leaving the last rendered frame visible.
+// stop clears the dynamic area and reprints the final state as static text.
+// This two-step approach prevents duplication caused by Enter keypresses
+// that shift the area content and confuse pterm's cursor tracking.
 func (lb *leaderboard) stop() {
-	lb.current = ""
-	lb.render()
 	_ = lb.area.Stop()
+	lb.printFinal()
 }
 
 // render builds the text frame and updates the area in-place.
 func (lb *leaderboard) render() {
 	var sb strings.Builder
-	testing := lb.current != ""
 
 	// ── Section title with live progress ─────────────────────────────────────
 	progress := fmt.Sprintf("(%d/%d)", lb.tested, lb.total)
@@ -107,13 +109,42 @@ func (lb *leaderboard) render() {
 	}
 
 	// Pad empty rows while testing so the area height stays stable.
-	if testing {
+	if lb.current != "" {
 		for i := len(top); i < leaderboardSize; i++ {
 			sb.WriteString(pterm.Gray(fmt.Sprintf(" %-3s  %-38s  %s\n", "-", "-", "-")))
 		}
 	}
 
 	lb.area.Update(sb.String())
+}
+
+// printFinal prints the final leaderboard state as static text (not managed
+// by pterm.Area), so it cannot be affected by cursor tracking issues.
+func (lb *leaderboard) printFinal() {
+	progress := fmt.Sprintf("(%d/%d)", lb.tested, lb.total)
+	title := fmt.Sprintf("# %s %s", i18n.T("benchmarking_section", lb.mirrorType), progress)
+	pterm.Println(pterm.Yellow(title))
+	pterm.Println()
+
+	pterm.Println(fmt.Sprintf(" %-3s  %-38s  %s", "#", i18n.T("table_header_name"), i18n.T("table_header_speed")))
+	pterm.Println(pterm.Gray(" " + strings.Repeat("-", 56)))
+
+	top := lb.entries
+	if len(top) > leaderboardSize {
+		top = top[:leaderboardSize]
+	}
+
+	for i, e := range top {
+		rank := fmt.Sprintf("%d.", i+1)
+		name := truncate(e.name, 38)
+		speed := engine.FormatSpeed(e.speed)
+
+		if i == 0 {
+			pterm.Println(pterm.Green(fmt.Sprintf(" %-3s  %-38s  %s", rank, name, speed)))
+		} else {
+			pterm.Println(fmt.Sprintf(" %-3s  %-38s  %s", rank, name, speed))
+		}
+	}
 }
 
 // truncate shortens s to at most max runes, appending "…" if needed.
