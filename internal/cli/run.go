@@ -145,7 +145,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 			ranking.SortByScore(rankedMint)
 			ranking.SortByScore(rankedBase)
 
-			pterm.Info.Println(i18n.T("testing_mirrors_country", localCountry))
+			pterm.Println(" " + i18n.T("testing_mirrors_country", localCountry))
 
 			// Obtém data dos mirrors default para check de staleness relativo (como mintsources)
 			defaultInfo := engine.FetchDefaultMirrorInfo(ctx, config)
@@ -157,7 +157,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 			if isInteractive {
 				viableMint = 0
 				viableBase = 0
-				pterm.Info.Println(i18n.T("press_enter_stop"))
+				pterm.Println(pterm.Gray(" " + i18n.T("press_enter_stop")))
 			}
 
 			// Listener de stdin para modo interativo (Enter para parar)
@@ -267,7 +267,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 					}
 				}
 				if best != nil {
-					pterm.Info.Println(i18n.T("mirror_selected", best.Mirror.Name, engine.FormatSpeed(best.Speed)))
+					pterm.Println(pterm.Green(" " + i18n.T("mirror_selected", best.Mirror.Name, engine.FormatSpeed(best.Speed))))
 				}
 				if len(viables) > 0 && targetSpeedLimit > 0 && viables[len(viables)-1].result.Speed >= targetSpeedLimit {
 					pterm.Success.Println(i18n.T("target_reached", engine.FormatSpeed(targetSpeedLimit)))
@@ -294,7 +294,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 					return
 				}
 
-				pterm.Info.Println(i18n.T("rehab_testing", candidate.Name, typeLabel))
+				pterm.Println(pterm.Gray(" " + i18n.T("rehab_testing", candidate.Name, typeLabel)))
 
 				m := domain.Mirror{
 					URL:       candidate.URL,
@@ -337,7 +337,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 			}
 
 			if cmd.Flags().Changed("viable") {
-				pterm.Info.Println(i18n.T("viable_summary",
+				pterm.Println(" " + i18n.T("viable_summary",
 					len(viablesMint), viableMint, len(viablesBase), viableBase))
 			}
 
@@ -368,7 +368,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				pterm.Success.Println(i18n.T("apply_success"))
 
 				if runUpdateCache {
-					pterm.Info.Println(i18n.T("apply_updating_cache"))
+					pterm.Println(pterm.Gray(" " + i18n.T("apply_updating_cache")))
 					if err := system.UpdateCache(ctx); err != nil {
 						pterm.Error.Println(i18n.T("err_apt_update", err))
 					} else {

@@ -78,16 +78,14 @@ func (lb *leaderboard) render() {
 	if testing {
 		progress := fmt.Sprintf("(%d/%d)", lb.tested, lb.total)
 		sb.WriteString(
-			pterm.LightBlue(fmt.Sprintf(" %s %s... %s",
+			pterm.Gray(fmt.Sprintf(" %s %s... %s",
 				i18n.T("testing_mirror_prefix"), lb.current, progress)),
 		)
 		sb.WriteString("\n\n")
 	}
 
 	// ── Header ───────────────────────────────────────────────────────────────
-	sb.WriteString(pterm.Bold.Sprint(
-		fmt.Sprintf(" %-3s  %-38s  %s\n", "#", i18n.T("table_header_name"), i18n.T("table_header_speed")),
-	))
+	sb.WriteString(fmt.Sprintf(" %-3s  %-38s  %s\n", "#", i18n.T("table_header_name"), i18n.T("table_header_speed")))
 	sb.WriteString(pterm.Gray(" " + strings.Repeat("-", 56) + "\n"))
 
 	// ── Rows ─────────────────────────────────────────────────────────────────
@@ -102,7 +100,7 @@ func (lb *leaderboard) render() {
 		speed := engine.FormatSpeed(e.speed)
 
 		var row string
-		if i == 0 && len(top) > 0 {
+		if i == 0 {
 			row = pterm.Green(fmt.Sprintf(" %-3s  %-38s  %s", rank, name, speed))
 		} else {
 			row = fmt.Sprintf(" %-3s  %-38s  %s", rank, name, speed)
@@ -113,13 +111,14 @@ func (lb *leaderboard) render() {
 	// Pad empty rows while testing so the area height stays stable.
 	if testing {
 		for i := len(top); i < leaderboardSize; i++ {
-			sb.WriteString(fmt.Sprintf(" %-3s  %-38s  %s\n", "-", "-", "-"))
+			sb.WriteString(pterm.Gray(fmt.Sprintf(" %-3s  %-38s  %s\n", "-", "-", "-")))
 		}
 	}
 
 	// ── Done message (only after stop) ───────────────────────────────────────
 	if !testing && len(lb.entries) > 0 {
-		sb.WriteString(pterm.LightBlue(fmt.Sprintf(" %s", i18n.T("leaderboard_done"))))
+		sb.WriteString("\n")
+		sb.WriteString(pterm.Gray(fmt.Sprintf(" %s", i18n.T("leaderboard_done"))))
 		sb.WriteString("\n")
 	}
 
