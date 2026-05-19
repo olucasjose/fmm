@@ -145,7 +145,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 			ranking.SortByScore(rankedMint)
 			ranking.SortByScore(rankedBase)
 
-			pterm.Println(" " + i18n.T("testing_mirrors_country", localCountry))
+			pterm.Println(i18n.T("testing_mirrors_country", localCountry))
 
 			// Obtém data dos mirrors default para check de staleness relativo (como mintsources)
 			defaultInfo := engine.FetchDefaultMirrorInfo(ctx, config)
@@ -157,7 +157,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 			if isInteractive {
 				viableMint = 0
 				viableBase = 0
-				pterm.Println(pterm.Gray(" " + i18n.T("press_enter_stop")))
+				pterm.Println(i18n.T("press_enter_stop"))
 			}
 
 			// Listener de stdin para modo interativo (Enter para parar)
@@ -187,13 +187,12 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 			}
 
 			runBenchmark := func(list []ranking.MirrorRank, mirrorType string, targetSpeedLimit float64, viableTarget int) ([]viableResult, map[string]bool) {
-				pterm.DefaultSection.Println(i18n.T("benchmarking_section", mirrorType))
-
 				var viables []viableResult
 				tested := make(map[string]bool)
 
 				// Start the live leaderboard area.
-				lb, lbErr := newLeaderboard(len(list))
+				pterm.Println() // spacing before section
+				lb, lbErr := newLeaderboard(mirrorType, len(list))
 				if lbErr != nil {
 					// Fallback: leaderboard unavailable, proceed without it.
 					lb = nil
@@ -267,7 +266,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 					}
 				}
 				if best != nil {
-					pterm.Println(pterm.Green(" " + i18n.T("mirror_selected", best.Mirror.Name, engine.FormatSpeed(best.Speed))))
+					pterm.Println(pterm.Green(i18n.T("mirror_selected", best.Mirror.Name, engine.FormatSpeed(best.Speed))))
 				}
 				if len(viables) > 0 && targetSpeedLimit > 0 && viables[len(viables)-1].result.Speed >= targetSpeedLimit {
 					pterm.Success.Println(i18n.T("target_reached", engine.FormatSpeed(targetSpeedLimit)))

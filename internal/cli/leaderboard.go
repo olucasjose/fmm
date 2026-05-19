@@ -25,28 +25,30 @@ type leaderboardEntry struct {
 // during a benchmark run. It renders itself inside a pterm.Area so it updates
 // in-place without scrolling the terminal.
 type leaderboard struct {
-	area    *pterm.AreaPrinter
-	entries []leaderboardEntry
-	tested  int
-	total   int
-	current string // name of the mirror being tested right now
+	area       *pterm.AreaPrinter
+	entries    []leaderboardEntry
+	tested     int
+	total      int
+	current    string // non-empty while a test is in progress
+	mirrorType string
 }
 
 // newLeaderboard creates and starts the live area printer.
-func newLeaderboard(total int) (*leaderboard, error) {
+func newLeaderboard(mirrorType string, total int) (*leaderboard, error) {
 	area, err := pterm.DefaultArea.Start()
 	if err != nil {
 		return nil, err
 	}
 	lb := &leaderboard{
-		area:  area,
-		total: total,
+		area:       area,
+		total:      total,
+		mirrorType: mirrorType,
 	}
 	lb.render()
 	return lb, nil
 }
 
-// setTesting updates the name of the mirror currently under test and redraws.
+// setTesting updates the progress counter and redraws.
 func (lb *leaderboard) setTesting(name string) {
 	lb.current = name
 	lb.tested++
@@ -74,15 +76,11 @@ func (lb *leaderboard) render() {
 	var sb strings.Builder
 	testing := lb.current != ""
 
-	// ── Status line (only while testing) ─────────────────────────────────────
-	if testing {
-		progress := fmt.Sprintf("(%d/%d)", lb.tested, lb.total)
-		sb.WriteString(
-			pterm.Gray(fmt.Sprintf(" %s %s... %s",
-				i18n.T("testing_mirror_prefix"), lb.current, progress)),
-		)
-		sb.WriteString("\n\n")
-	}
+	// ── Section title with live progress ─────────────────────────────────────
+	progress := fmt.Sprintf("(%d/%d)", lb.tested, lb.total)
+	title := fmt.Sprintf("# %s %s", i18n.T("benchmarking_section", lb.mirrorType), progress)
+	sb.WriteString(pterm.Yellow(title))
+	sb.WriteString("\n\n")
 
 	// ── Header ───────────────────────────────────────────────────────────────
 	sb.WriteString(fmt.Sprintf(" %-3s  %-38s  %s\n", "#", i18n.T("table_header_name"), i18n.T("table_header_speed")))
@@ -113,13 +111,6 @@ func (lb *leaderboard) render() {
 		for i := len(top); i < leaderboardSize; i++ {
 			sb.WriteString(pterm.Gray(fmt.Sprintf(" %-3s  %-38s  %s\n", "-", "-", "-")))
 		}
-	}
-
-	// ── Done message (only after stop) ───────────────────────────────────────
-	if !testing && len(lb.entries) > 0 {
-		sb.WriteString("\n")
-		sb.WriteString(pterm.Gray(fmt.Sprintf(" %s", i18n.T("leaderboard_done"))))
-		sb.WriteString("\n")
 	}
 
 	lb.area.Update(sb.String())
