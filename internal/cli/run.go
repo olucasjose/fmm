@@ -5,7 +5,6 @@ package cli
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -192,10 +191,21 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 
 				var viables []viableResult
 				tested := make(map[string]bool)
-				var bestSpeed float64
+
+				// Start the live leaderboard area.
+				lb, lbErr := newLeaderboard(len(list))
+				if lbErr != nil {
+					// Fallback: leaderboard unavailable, proceed without it.
+					lb = nil
+				}
+
+				stopped := false
 
 				for _, mr := range list {
 					if ctx.Err() != nil {
+						if lb != nil {
+							lb.stop()
+						}
 						pterm.Warning.Println(i18n.T("interrupted"))
 						os.Exit(130)
 					}
@@ -203,10 +213,12 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 					if enterCh != nil {
 						select {
 						case <-enterCh:
-							pterm.Info.Println(i18n.T("stopped_by_user"))
-							return viables, tested
+							stopped = true
 						default:
 						}
+					}
+					if stopped {
+						break
 					}
 
 					if viableTarget > 0 && len(viables) >= viableTarget {
@@ -222,42 +234,34 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 						Type:      mr.Type,
 					}
 
-					pterm.Print(pterm.LightBlue(i18n.T("testing_mirror", m.Name)))
+					if lb != nil {
+						lb.setTesting(m.Name)
+					}
 
 					res := engine.TestMirror(ctx, m, config, defaultInfo)
 					tested[mr.URL] = true
 
 					ranking.UpdateMirrorResult(rankData, mr.URL, res.Speed, res.Err)
 
-					if res.Err != nil {
-						if runShowErrors {
-							pterm.Println(pterm.Red(fmt.Sprintf("[%s]", res.Err.Error())))
-						} else {
-							msg := res.Err.Error()
-							if msg == "unreachable" || msg == "obsolete" {
-								msg = i18n.T(msg)
-							} else {
-								msg = i18n.T("unreachable")
-							}
-							pterm.Println(pterm.Red(fmt.Sprintf("[%s]", msg)))
+					if res.Err == nil {
+						viables = append(viables, viableResult{rank: mr, result: res})
+						if lb != nil {
+							lb.addResult(m.Name, res.Speed)
 						}
-						continue
+						if targetSpeedLimit > 0 && res.Speed >= targetSpeedLimit {
+							break
+						}
 					}
+				}
 
-					speedStr := engine.FormatSpeed(res.Speed)
-					if res.Speed > bestSpeed {
-						bestSpeed = res.Speed
-						pterm.Println(pterm.Green(speedStr + " ★"))
-					} else {
-						pterm.Println(pterm.Green(speedStr))
-					}
-
-					viables = append(viables, viableResult{rank: mr, result: res})
-
-					if targetSpeedLimit > 0 && res.Speed >= targetSpeedLimit {
-						pterm.Success.Println(i18n.T("target_reached", engine.FormatSpeed(targetSpeedLimit)))
-						break
-					}
+				if lb != nil {
+					lb.stop()
+				}
+				if stopped {
+					pterm.Info.Println(i18n.T("stopped_by_user"))
+				}
+				if len(viables) > 0 && targetSpeedLimit > 0 && viables[len(viables)-1].result.Speed >= targetSpeedLimit {
+					pterm.Success.Println(i18n.T("target_reached", engine.FormatSpeed(targetSpeedLimit)))
 				}
 
 				return viables, tested

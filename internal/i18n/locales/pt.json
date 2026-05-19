@@ -22,6 +22,8 @@
   "obsolete": "Desatualizado",
   "testing_mirrors_country": "Testando mirrors.\nPaís detectado: %s",
   "testing_mirror": " Testando %s... ",
+  "testing_mirror_prefix": "Testando",
+  "leaderboard_done": "Testes concluídos.",
   "target_reached": "Meta atingida (>= %s).",
   "press_enter_stop": "Pressione [Enter] para parar e usar os melhores mirrors encontrados.",
   "stopped_by_user": "Parado. Usando melhores mirrors encontrados.",

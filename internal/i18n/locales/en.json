@@ -22,6 +22,8 @@
   "obsolete": "Obsolete/Stale",
   "testing_mirrors_country": "Testing mirrors.\nDetected country: %s",
   "testing_mirror": " Testing %s... ",
+  "testing_mirror_prefix": "Testing",
+  "leaderboard_done": "Tests completed.",
   "target_reached": "Target reached (>= %s).",
   "press_enter_stop": "Press [Enter] to stop and use the best mirrors found.",
   "stopped_by_user": "Stopped. Using best mirrors found.",
