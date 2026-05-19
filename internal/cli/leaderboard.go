@@ -72,18 +72,17 @@ func (lb *leaderboard) stop() {
 // render builds the text frame and updates the area in-place.
 func (lb *leaderboard) render() {
 	var sb strings.Builder
+	testing := lb.current != ""
 
-	// ── Status line ──────────────────────────────────────────────────────────
-	if lb.current != "" {
+	// ── Status line (only while testing) ─────────────────────────────────────
+	if testing {
 		progress := fmt.Sprintf("(%d/%d)", lb.tested, lb.total)
 		sb.WriteString(
 			pterm.LightBlue(fmt.Sprintf(" %s %s... %s",
 				i18n.T("testing_mirror_prefix"), lb.current, progress)),
 		)
-	} else {
-		sb.WriteString(pterm.LightBlue(fmt.Sprintf(" %s", i18n.T("leaderboard_done"))))
+		sb.WriteString("\n\n")
 	}
-	sb.WriteString("\n\n")
 
 	// ── Header ───────────────────────────────────────────────────────────────
 	sb.WriteString(pterm.Bold.Sprint(
@@ -111,9 +110,17 @@ func (lb *leaderboard) render() {
 		sb.WriteString(row + "\n")
 	}
 
-	// Pad empty rows so the area height stays stable.
-	for i := len(top); i < leaderboardSize; i++ {
-		sb.WriteString(fmt.Sprintf(" %-3s  %-38s  %s\n", "-", "-", "-"))
+	// Pad empty rows while testing so the area height stays stable.
+	if testing {
+		for i := len(top); i < leaderboardSize; i++ {
+			sb.WriteString(fmt.Sprintf(" %-3s  %-38s  %s\n", "-", "-", "-"))
+		}
+	}
+
+	// ── Done message (only after stop) ───────────────────────────────────────
+	if !testing && len(lb.entries) > 0 {
+		sb.WriteString(pterm.LightBlue(fmt.Sprintf(" %s", i18n.T("leaderboard_done"))))
+		sb.WriteString("\n")
 	}
 
 	lb.area.Update(sb.String())
