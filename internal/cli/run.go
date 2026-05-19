@@ -267,7 +267,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 					}
 				}
 				if best != nil {
-					pterm.Info.Println(i18n.T("mirror_selected", best.Mirror.Name))
+					pterm.Info.Println(i18n.T("mirror_selected", best.Mirror.Name, engine.FormatSpeed(best.Speed)))
 				}
 				if len(viables) > 0 && targetSpeedLimit > 0 && viables[len(viables)-1].result.Speed >= targetSpeedLimit {
 					pterm.Success.Println(i18n.T("target_reached", engine.FormatSpeed(targetSpeedLimit)))
@@ -322,8 +322,6 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				pterm.Warning.Println(i18n.T("err_save_ranking", err))
 			}
 
-			pterm.DefaultSection.WithStyle(pterm.NewStyle(pterm.FgYellow)).Println(i18n.T("final_results"))
-
 			var bestMint, bestBase *engine.Result
 			for _, v := range viablesMint {
 				if bestMint == nil || v.result.Speed > bestMint.Speed {
@@ -336,18 +334,6 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 					r := v.result
 					bestBase = &r
 				}
-			}
-
-			if bestMint != nil {
-				pterm.Info.Println(i18n.T("best_mint", bestMint.Mirror.URL, engine.FormatSpeed(bestMint.Speed)))
-			} else {
-				pterm.Error.Println(i18n.T("no_mint_found"))
-			}
-
-			if bestBase != nil {
-				pterm.Info.Println(i18n.T("best_base", bestBase.Mirror.URL, engine.FormatSpeed(bestBase.Speed)))
-			} else {
-				pterm.Error.Println(i18n.T("no_base_found"))
 			}
 
 			if cmd.Flags().Changed("viable") {

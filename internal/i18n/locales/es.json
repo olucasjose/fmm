@@ -27,7 +27,7 @@
   "target_reached": "Meta alcanzada (>= %s).",
   "press_enter_stop": "Presione [Enter] para detener y usar los mejores mirrors encontrados.",
   "stopped_by_user": "Detenido. Usando mejores mirrors encontrados.",
-  "mirror_selected": "Mirror seleccionado: %s",
+  "mirror_selected": "Mirror seleccionado: %s - %s",
 
   "benchmarking_section": "Benchmarking %s Mirrors",
   "rehab_testing": "Prueba de rehabilitación: %s (%s)",
