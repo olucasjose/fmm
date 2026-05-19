@@ -13,7 +13,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
-const leaderboardSize = 5
+const leaderboardSize = 10
 
 // leaderboardEntry holds the data for a single row in the live leaderboard.
 type leaderboardEntry struct {
