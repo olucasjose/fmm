@@ -257,8 +257,17 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				if lb != nil {
 					lb.stop()
 				}
-				if stopped {
-					pterm.Info.Println(i18n.T("stopped_by_user"))
+
+				// Determina o melhor mirror para a mensagem de seleção.
+				var best *engine.Result
+				for i := range viables {
+					if best == nil || viables[i].result.Speed > best.Speed {
+						r := viables[i].result
+						best = &r
+					}
+				}
+				if best != nil {
+					pterm.Info.Println(i18n.T("mirror_selected", best.Mirror.Name))
 				}
 				if len(viables) > 0 && targetSpeedLimit > 0 && viables[len(viables)-1].result.Speed >= targetSpeedLimit {
 					pterm.Success.Println(i18n.T("target_reached", engine.FormatSpeed(targetSpeedLimit)))
@@ -313,8 +322,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				pterm.Warning.Println(i18n.T("err_save_ranking", err))
 			}
 
-			pterm.Println()
-			pterm.DefaultHeader.WithFullWidth().Println(i18n.T("final_results"))
+			pterm.DefaultSection.WithStyle(pterm.NewStyle(pterm.FgYellow)).Println(i18n.T("final_results"))
 
 			var bestMint, bestBase *engine.Result
 			for _, v := range viablesMint {
@@ -342,8 +350,10 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				pterm.Error.Println(i18n.T("no_base_found"))
 			}
 
-			pterm.Info.Println(i18n.T("viable_summary",
-				len(viablesMint), viableMint, len(viablesBase), viableBase))
+			if cmd.Flags().Changed("viable") {
+				pterm.Info.Println(i18n.T("viable_summary",
+					len(viablesMint), viableMint, len(viablesBase), viableBase))
+			}
 
 			finalMintURL := config.MintDefault
 			if bestMint != nil {
