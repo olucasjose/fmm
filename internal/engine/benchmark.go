@@ -139,6 +139,7 @@ func getURLLastModified(ctx context.Context, url string) *time.Time {
 	if err != nil {
 		return nil
 	}
+	req.Header.Set("User-Agent", domain.UserAgent)
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
@@ -194,6 +195,7 @@ func measureSpeed(ctx context.Context, url string) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
+	req.Header.Set("User-Agent", domain.UserAgent)
 
 	resp, err := httpClient.Do(req)
 	if err != nil {

@@ -9,6 +9,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"fmm/internal/domain"
 )
 
 type geoResponse struct {
@@ -18,13 +20,17 @@ type geoResponse struct {
 // DetectLocalCountry tenta buscar o ISO do país por GeoIP. Se falhar, usa a var env LANG.
 func DetectLocalCountry() string {
 	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Get("https://api.ip2location.io")
+	req, err := http.NewRequest("GET", "https://api.ip2location.io", nil)
 	if err == nil {
-		defer resp.Body.Close()
-		var geo geoResponse
-		if err := json.NewDecoder(resp.Body).Decode(&geo); err == nil {
-			if geo.CountryCode != "" && geo.CountryCode != "None" {
-				return geo.CountryCode
+		req.Header.Set("User-Agent", domain.UserAgent)
+		resp, err := client.Do(req)
+		if err == nil {
+			defer resp.Body.Close()
+			var geo geoResponse
+			if err := json.NewDecoder(resp.Body).Decode(&geo); err == nil {
+				if geo.CountryCode != "" && geo.CountryCode != "None" {
+					return geo.CountryCode
+				}
 			}
 		}
 	}
