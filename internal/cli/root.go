@@ -23,7 +23,7 @@ func isBypassCommand() bool {
 	}
 	cmd := os.Args[1]
 	// Adicionado version na whitelist para permitir consulta sem sudo
-	return cmd == "help" || cmd == "completion" || cmd == "__complete" || cmd == "version" || cmd == "-v" || cmd == "--version" || cmd == "list" || cmd == "ranking"
+	return cmd == "help" || cmd == "completion" || cmd == "__complete" || cmd == "version" || cmd == "-v" || cmd == "--version" || cmd == "list"
 }
 
 func Execute() {
@@ -58,7 +58,6 @@ func Execute() {
 
 	rootCmd.AddCommand(newRunCmd(ctx))
 	rootCmd.AddCommand(newListCmd(ctx))
-	rootCmd.AddCommand(newRankingCmd(ctx))
 
 	if err := rootCmd.ExecuteContext(ctx); err != nil {
 		pterm.Error.Println(err.Error())

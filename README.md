@@ -2,7 +2,7 @@
 
 🌍 *Read this in other languages: [English](README.md) | [Português](README.pt-BR.md)*
 
-FMM is a fast and interactive mirror ranking and selection tool for Linux Mint. It is designed to quickly benchmark available Linux Mint mirrors and help you update your system's mirror configuration for optimal download speeds.
+FMM is a fast and interactive mirror selection tool for Linux Mint. It benchmarks available mirrors in order of geographic proximity and helps you update your system's mirror configuration for optimal download speeds.
 
 ## Scope & Philosophy
 
@@ -35,7 +35,7 @@ FMM requires `sudo` privileges for actions that modify system configurations (li
 
 ### Main Commands & Flags
 
-- **Run the main mirror ranking and update flow:**
+- **Run the main mirror benchmark and update flow:**
   ```bash
   sudo fmm run [flags]
   ```
@@ -56,13 +56,6 @@ FMM requires `sudo` privileges for actions that modify system configurations (li
   **Key Flags for `list`:**
   - `-c, --countries <list>`: Filter the list by country codes.
   - `-r, --regions <list>`: Filter the list by regions.
-  - `--ranking`: Show the historical benchmark ranking instead of the raw mirror list.
-
-- **Reset the mirror benchmark history:**
-  ```bash
-  fmm ranking reset
-  ```
-
 - **Show help and available commands:**
   ```bash
   fmm help

@@ -15,7 +15,6 @@ import (
 	"fmm/internal/geo"
 	"fmm/internal/i18n"
 	"fmm/internal/parser"
-	"fmm/internal/ranking"
 	"fmm/internal/sysinfo"
 	"fmm/internal/system"
 	"github.com/pterm/pterm"
@@ -130,8 +129,6 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 			viableMint, viableBase := parseSplitViable(runViable)
 
 			// Filtra mirrors conforme flags do usuário
-			// Sem --countries: testa todos (ranking prioriza por geo factor)
-			// Com --countries: aplica dentro do subconjunto filtrado
 			filteredMint := domain.FilterMirrors(mintMirrors, runCountries, runMirrors, limitMint)
 			filteredBase := domain.FilterMirrors(baseMirrors, runCountries, runMirrors, limitBase)
 
@@ -140,18 +137,10 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				os.Exit(0)
 			}
 
-			rankingPath := ranking.DefaultPath()
-			rankData, err := ranking.Load(rankingPath)
-			if err != nil {
-				pterm.Warning.Println(i18n.T("err_load_ranking", err))
-				rankData = &ranking.RankingData{Version: 1, Mirrors: make(map[string]*ranking.MirrorRank)}
-			}
-
-			allMirrors := append(filteredMint, filteredBase...)
-			rankedMint, rankedBase := ranking.Merge(rankData, allMirrors, localCountry)
-
-			ranking.SortByScore(rankedMint)
-			ranking.SortByScore(rankedBase)
+			// Ordena por baldes geográficos (reproduzindo mintsources)
+			hasExplicitFilter := len(runCountries) > 0 || len(runMirrors) > 0
+			sortedMint := geo.SortByGeoBuckets(filteredMint, localCountry, config.MintDefault, hasExplicitFilter)
+			sortedBase := geo.SortByGeoBuckets(filteredBase, localCountry, config.BaseDefault, hasExplicitFilter)
 
 			pterm.Println(i18n.T("testing_mirrors_country", localCountry))
 
@@ -194,13 +183,12 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 			}
 
 			type viableResult struct {
-				rank   ranking.MirrorRank
+				mirror domain.Mirror
 				result engine.Result
 			}
 
-			runBenchmark := func(list []ranking.MirrorRank, mirrorType string, targetSpeedLimit float64, viableTarget int) ([]viableResult, map[string]bool) {
+			runBenchmark := func(list []domain.Mirror, mirrorType string, targetSpeedLimit float64, viableTarget int) []viableResult {
 				var viables []viableResult
-				tested := make(map[string]bool)
 
 				// Start the live leaderboard area.
 				pterm.Println() // spacing before section
@@ -212,7 +200,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 
 				stopped := false
 
-				for _, mr := range list {
+				for _, m := range list {
 					if ctx.Err() != nil {
 						if lb != nil {
 							lb.stop()
@@ -237,26 +225,14 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 						break
 					}
 
-					m := domain.Mirror{
-						URL:       mr.URL,
-						Country:   mr.Country,
-						Region:    mr.Region,
-						Subregion: mr.Subregion,
-						Name:      mr.Name,
-						Type:      mr.Type,
-					}
-
 					if lb != nil {
 						lb.setTesting(m.Name)
 					}
 
 					res := engine.TestMirror(ctx, m, config, defaultInfo)
-					tested[mr.URL] = true
-
-					ranking.UpdateMirrorResult(rankData, mr.URL, res.Speed, res.Err)
 
 					if res.Err == nil {
-						viables = append(viables, viableResult{rank: mr, result: res})
+						viables = append(viables, viableResult{mirror: m, result: res})
 						if lb != nil {
 							lb.addResult(m.Name, res.Speed)
 						}
@@ -285,58 +261,15 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 					pterm.Success.Println(i18n.T("target_reached", engine.FormatSpeed(targetSpeedLimit)))
 				}
 
-				return viables, tested
+				return viables
 			}
 
-			viablesMint, testedMint := runBenchmark(rankedMint, "Mint", targetMint, viableMint)
-			viablesBase, testedBase := runBenchmark(rankedBase, "Base", targetBase, viableBase)
+			viablesMint := runBenchmark(sortedMint, "Mint", targetMint, viableMint)
+			viablesBase := runBenchmark(sortedBase, "Base", targetBase, viableBase)
 
 			// Restaura echo do terminal após os benchmarks.
 			if isInteractive {
 				stty("echo")
-			}
-
-			// Reabilitação: testa 1 mirror do quartil inferior por tipo
-			testRehab := func(mirrorType domain.MirrorType, typeLabel string, tested map[string]bool) {
-				var allRanked []ranking.MirrorRank
-				for _, mr := range rankData.Mirrors {
-					if mr.Type == mirrorType {
-						ranking.RecalcScore(mr, localCountry)
-						allRanked = append(allRanked, *mr)
-					}
-				}
-
-				candidate := ranking.SelectRehabCandidate(allRanked, mirrorType, tested)
-				if candidate == nil {
-					return
-				}
-
-				pterm.Println(pterm.Gray(" " + i18n.T("rehab_testing", candidate.Name, typeLabel)))
-
-				m := domain.Mirror{
-					URL:       candidate.URL,
-					Country:   candidate.Country,
-					Region:    candidate.Region,
-					Subregion: candidate.Subregion,
-					Name:      candidate.Name,
-					Type:      candidate.Type,
-				}
-
-				res := engine.TestMirror(ctx, m, config, defaultInfo)
-				ranking.UpdateMirrorResult(rankData, candidate.URL, res.Speed, res.Err)
-
-				if res.Err != nil {
-					pterm.Println(pterm.Yellow(i18n.T("rehab_result_fail", candidate.Name, res.Err.Error())))
-				} else {
-					pterm.Println(pterm.Green(i18n.T("rehab_result_ok", candidate.Name, engine.FormatSpeed(res.Speed))))
-				}
-			}
-
-			testRehab(domain.TypeMint, "Mint", testedMint)
-			testRehab(domain.TypeBase, "Base", testedBase)
-
-			if err := ranking.Save(rankingPath, rankData); err != nil {
-				pterm.Warning.Println(i18n.T("err_save_ranking", err))
 			}
 
 			var bestMint, bestBase *engine.Result

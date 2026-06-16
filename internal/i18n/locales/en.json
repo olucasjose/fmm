@@ -2,8 +2,6 @@
   "root_desc": "Fastest Mint Mirror - Benchmark and apply Linux Mint mirrors.",
   "run_desc": "Run benchmark tests on mirrors.",
   "list_desc": "List available mirrors.",
-  "ranking_desc": "Manage the mirror ranking.",
-  "ranking_reset_desc": "Reset the ranking data.",
 
   "flag_limit": "Limit the number of mirrors tested (e.g. 5 or 2,5 for mint,base)",
   "flag_mirrors": "Select specific mirrors by URL/Name",
@@ -15,7 +13,6 @@
   "flag_errs": "Show exact reasons for mirror failures",
   "flag_quiet": "Run silently",
   "flag_viable": "Number of viable mirrors to find (default 5, e.g. 3 or 3,7 for mint,base)",
-  "flag_ranking": "Show the current mirror ranking",
 
   "interrupted": "Process interrupted by user. Cleaning up...",
   "unreachable": "Unreachable",
@@ -28,9 +25,6 @@
   "mirror_selected": "Selected mirror: %s - %s",
 
   "benchmarking_section": "Benchmarking %s Mirrors",
-  "rehab_testing": "Rehabilitation test: %s (%s)",
-  "rehab_result_fail": "  Rehab result: %s [%s]",
-  "rehab_result_ok": "  Rehab result: %s [%s]",
 
   "final_results": "Final Results",
   "best_mint": "Best Mint: %s - %s",
@@ -39,26 +33,12 @@
   "no_base_found": "No valid Base mirror found.",
   "viable_summary": "Viable mirrors found: Mint %d/%d, Base %d/%d",
 
-  "ranking_header": "%s Mirror Ranking (%d)",
-  "ranking_empty": "No ranking data yet. Run 'fmm run' first.",
-  "ranking_updated": "Updated: %s",
-  "ranking_reset_done": "Ranking reset successfully.",
-  "ranking_not_found": "No ranking file found. Nothing to reset.",
-  "ranking_legend": "T=Tests S=Successes F=Failures Conf.=Reliability Geo=Proximity",
-
   "table_header_name": "Name",
   "table_header_url": "URL",
   "table_header_country": "Country",
   "table_header_region": "Region",
   "table_header_subregion": "Sub-Region",
-  "table_header_speed": "Speed (EMA)",
-  "table_header_conf": "Conf.",
-  "table_header_geo": "Geo",
-  "table_header_score": "Score",
-  "table_header_tests": "T",
-  "table_header_successes": "S",
-  "table_header_failures": "F",
-  "table_header_last_tested": "Last Test",
+  "table_header_speed": "Speed",
 
   "list_section": "%s Mirrors (%d)",
   "list_empty_filter": "No mirrors found with the applied filters.",
@@ -66,9 +46,6 @@
   "err_os_release": "Failed to detect OS release: %v",
   "err_load_config": "Failed to load mintsources.conf: %v",
   "err_load_mirrors": "Failed to load mirror files: %v",
-  "err_load_ranking": "Failed to load ranking: %v. Starting new ranking.",
-  "err_save_ranking": "Failed to save ranking: %v",
-  "err_remove_ranking": "Failed to remove ranking: %v",
   "err_system_modify": "Failed to modify system: %v",
   "err_apt_update": "apt-get update failed: %v",
 

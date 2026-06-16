@@ -10,9 +10,12 @@ import (
 
 // CountryData representa a estrutura do JSON interno do Linux Mint
 type CountryData struct {
-	CCA2      string `json:"cca2"`
-	Region    string `json:"region"`
-	Subregion string `json:"subregion"`
+	CCA2             string   `json:"cca2"`
+	CCA3             string   `json:"cca3"`
+	Region           string   `json:"region"`
+	Subregion        string   `json:"subregion"`
+	Borders          []string `json:"borders"`
+	NetworkNeighbors []string `json:"networkNeighbors"`
 }
 
 var countriesCache map[string]CountryData
@@ -45,4 +48,21 @@ func GetRegionInfo(cca2 string) (region, subregion string) {
 		return c.Region, c.Subregion
 	}
 	return "", ""
+}
+
+// GetCountryData retorna os dados completos de um país pelo seu CCA2.
+func GetCountryData(cca2 string) *CountryData {
+	if c, ok := countriesCache[cca2]; ok {
+		return &c
+	}
+	return nil
+}
+
+// GetAllCountries retorna todos os países carregados.
+func GetAllCountries() []CountryData {
+	result := make([]CountryData, 0, len(countriesCache))
+	for _, c := range countriesCache {
+		result = append(result, c)
+	}
+	return result
 }
