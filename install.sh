@@ -1,8 +1,9 @@
 #!/bin/sh
 set -e
 
-echo "Compilando fmm..."
-go build -o fmm cmd/fmm/main.go
+VERSION=$(date +'%y.%m.%d.%H%M')
+echo "Compilando fmm (versão $VERSION)..."
+go build -ldflags "-X 'fmm/internal/cli.Version=$VERSION'" -o fmm cmd/fmm/main.go
 
 DEST_BIN="/usr/local/bin/fmm"
 DEST_COMPLETION="/usr/share/bash-completion/completions/fmm"

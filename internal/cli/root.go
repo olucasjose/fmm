@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const Version = "1.4.2"
+var Version = "dev" // Atualizado dinamicamente via ldflags no momento do build
 
 func isBypassCommand() bool {
 	if len(os.Args) <= 1 {
@@ -50,6 +50,9 @@ func Execute() {
 		Short:   i18n.T("root_desc"),
 		Version: Version,
 	}
+
+	// Oculta o comando 'completion' da ajuda e do autocompletar do usuário (ainda pode ser usado pelo install.sh)
+	rootCmd.CompletionOptions.HiddenDefaultCmd = true
 
 	rootCmd.SetVersionTemplate(fmt.Sprintf("fmm version %s\n", Version))
 
