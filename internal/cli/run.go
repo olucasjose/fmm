@@ -189,6 +189,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 
 			runBenchmark := func(list []domain.Mirror, mirrorType string, targetSpeedLimit float64, viableTarget int) []viableResult {
 				var viables []viableResult
+				var failures []engine.Result
 
 				// Start the live leaderboard area.
 				pterm.Println() // spacing before section
@@ -239,11 +240,31 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 						if targetSpeedLimit > 0 && res.Speed >= targetSpeedLimit {
 							break
 						}
+					} else {
+						failures = append(failures, res)
 					}
 				}
 
 				if lb != nil {
 					lb.stop()
+				}
+
+				if runShowErrors && len(failures) > 0 {
+					pterm.Println()
+					pterm.Println(pterm.Red(i18n.T("errors_section", len(failures))))
+					
+					tableData := pterm.TableData{
+						{i18n.T("table_header_name"), "Erro"},
+					}
+					for _, f := range failures {
+						name := f.Mirror.Name
+						if len([]rune(name)) > 38 {
+							name = string([]rune(name)[:37]) + "…"
+						}
+						tableData = append(tableData, []string{name, f.Err.Error()})
+					}
+					pterm.DefaultTable.WithHasHeader().WithData(tableData).Render()
+					pterm.Println()
 				}
 
 				// Determina o melhor mirror para a mensagem de seleção.
