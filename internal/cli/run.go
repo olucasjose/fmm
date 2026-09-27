@@ -116,7 +116,7 @@ func newRunCmd(ctx context.Context) *cobra.Command {
 				os.Exit(1)
 			}
 
-			mintMirrors, baseMirrors, err := parser.LoadMirrors(config.MirrorsPath, config.BaseMirrorsPath)
+			mintMirrors, baseMirrors, err := parser.LoadMirrors(config)
 			if err != nil {
 				pterm.Error.Println(i18n.T("err_load_mirrors", err))
 				os.Exit(1)

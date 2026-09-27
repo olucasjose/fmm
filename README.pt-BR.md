@@ -20,6 +20,12 @@ O FMM é licenciado sob a **GNU General Public License v3.0 (GPLv3)**. O softwar
 
 Você pode instalar o FMM diretamente executando o script de instalação fornecido. O script compila o binário em Go, move-o para o caminho do seu sistema e configura o autocompletar no bash.
 
+O FMM usa os caminhos de mirrors declarados pela configuração do `mintsources` instalada no sistema. Versões novas do Linux Mint podem obter o catálogo de mirrors Mint pelo pacote `mint-mirrors`, enquanto versões legadas ainda suportadas continuam usando o catálogo localizado em `/usr/share/python-apt/templates`. Portanto, `mint-mirrors` não é uma dependência universal do FMM.
+
+O caminho configurado sempre tem prioridade. Se o catálogo Mint configurado estiver ausente, o FMM também reconhece o caminho atual `/usr/share/mint-mirrors/linuxmint.list` e o caminho legado `/usr/share/python-apt/templates/LinuxMint.mirrors`. Catálogos base do Ubuntu e do Debian nunca são substituídos um pelo outro.
+
+Na LMDE, o FMM também inclui no benchmark o mirror Debian padrão configurado quando ele não estiver listado diretamente em `debian.mirrors`.
+
 ```bash
 # Clone o repositório
 git clone https://github.com/olucasjose/fmm.git

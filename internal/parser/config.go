@@ -12,22 +12,29 @@ import (
 
 // MintConfig guarda configurações base extraídas.
 type MintConfig struct {
-	Codename        string
-	BaseCodename    string
-	BaseDefault     string
-	MintDefault     string
-	MirrorsPath     string
-	BaseMirrorsPath string
+	Codename           string
+	BaseCodename       string
+	BaseDefault        string
+	MintDefault        string
+	MirrorsPath        string
+	BaseMirrorsPath    string
+	OptionalComponents []string
 }
 
 // ParseMintConfig lê as configurações cruas e retorna o struct de config.
 func ParseMintConfig(r io.Reader) (*MintConfig, error) {
 	config := &MintConfig{}
 	scanner := bufio.NewScanner(r)
+	section := ""
+	optionalComponents := make(map[string]bool)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "[") {
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+			section = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(line, "["), "]"))
 			continue
 		}
 
@@ -36,19 +43,30 @@ func ParseMintConfig(r io.Reader) (*MintConfig, error) {
 			key := strings.TrimSpace(parts[0])
 			val := strings.TrimSpace(parts[1])
 
-			switch key {
-			case "codename":
-				config.Codename = val
-			case "base_codename":
-				config.BaseCodename = val
-			case "default":
-				config.MintDefault = val
-			case "base_default":
-				config.BaseDefault = val
+			switch section {
+			case "general":
+				switch key {
+				case "codename":
+					config.Codename = val
+				case "base_codename":
+					config.BaseCodename = val
+				}
 			case "mirrors":
-				config.MirrorsPath = val
-			case "base_mirrors":
-				config.BaseMirrorsPath = val
+				switch key {
+				case "default":
+					config.MintDefault = val
+				case "base_default":
+					config.BaseDefault = val
+				case "mirrors":
+					config.MirrorsPath = val
+				case "base_mirrors":
+					config.BaseMirrorsPath = val
+				}
+			default:
+				if strings.HasPrefix(section, "optional_component_") && key == "name" && val != "" && !optionalComponents[val] {
+					optionalComponents[val] = true
+					config.OptionalComponents = append(config.OptionalComponents, val)
+				}
 			}
 		}
 	}
