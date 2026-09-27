@@ -46,9 +46,7 @@ func ParseMirrorsFile(r io.Reader, mType domain.MirrorType) ([]domain.Mirror, er
 			}
 
 			url := elements[0]
-			if strings.HasSuffix(url, "/") {
-				url = url[:len(url)-1]
-			}
+			url = strings.TrimSuffix(url, "/")
 
 			name := url
 			if len(elements) > 1 {

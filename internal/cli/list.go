@@ -4,7 +4,6 @@
 package cli
 
 import (
-	"context"
 	"os"
 	"sort"
 	"strings"
@@ -22,7 +21,7 @@ var (
 	listRegions   []string
 )
 
-func newListCmd(ctx context.Context) *cobra.Command {
+func newListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: i18n.T("list_desc"),
@@ -46,10 +45,8 @@ func newListCmd(ctx context.Context) *cobra.Command {
 				os.Exit(1)
 			}
 
-
 			mintFiltered := domain.FilterForList(mintMirrors, listCountries, listRegions)
 			baseFiltered := domain.FilterForList(baseMirrors, listCountries, listRegions)
-
 
 			sortByName := func(mirrors []domain.Mirror) {
 				sort.Slice(mirrors, func(i, j int) bool {
@@ -59,7 +56,6 @@ func newListCmd(ctx context.Context) *cobra.Command {
 
 			sortByName(mintFiltered)
 			sortByName(baseFiltered)
-
 
 			renderTable := func(title string, mirrors []domain.Mirror) {
 				pterm.DefaultSection.Println(i18n.T("list_section", title, len(mirrors)))
@@ -76,7 +72,6 @@ func newListCmd(ctx context.Context) *cobra.Command {
 				}
 				pterm.DefaultTable.WithHasHeader().WithData(tableData).Render()
 			}
-
 
 			renderTable("Mint", mintFiltered)
 			pterm.Println()
