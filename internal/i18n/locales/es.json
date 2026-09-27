@@ -25,6 +25,7 @@
   "mirror_selected": "Mirror seleccionado: %s - %s",
 
   "benchmarking_section": "Benchmarking %s Mirrors",
+  "errors_section": "Mirrors Fallidos (%d)",
 
   "final_results": "Resultados Finales",
   "best_mint": "Mejor Mint: %s - %s",

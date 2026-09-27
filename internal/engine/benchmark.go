@@ -197,6 +197,9 @@ func measureSpeed(ctx context.Context, url string) (float64, error) {
 	}
 	req.Header.Set("User-Agent", domain.UserAgent)
 
+	// O pycurl.SPEED_DOWNLOAD considera o tempo total da operação, incluindo
+	// conexão, redirecionamentos e espera pelos cabeçalhos.
+	start := time.Now()
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return 0, errors.New("unreachable")
@@ -207,10 +210,11 @@ func measureSpeed(ctx context.Context, url string) (float64, error) {
 		return 0, errors.New("unreachable")
 	}
 
-	start := time.Now()
 	bytesRead, err := io.Copy(io.Discard, resp.Body)
-
 	elapsed := time.Since(start).Seconds()
+	if err != nil {
+		return 0, errors.New("unreachable")
+	}
 
 	if bytesRead == 0 || elapsed == 0 {
 		return 0, errors.New("unreachable")

@@ -57,7 +57,7 @@ func Execute() {
 	rootCmd.SetVersionTemplate(fmt.Sprintf("fmm version %s\n", Version))
 
 	rootCmd.AddCommand(newRunCmd(ctx))
-	rootCmd.AddCommand(newListCmd(ctx))
+	rootCmd.AddCommand(newListCmd())
 
 	if err := rootCmd.ExecuteContext(ctx); err != nil {
 		pterm.Error.Println(err.Error())
